@@ -1,0 +1,25 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Builds / bundles / caches
+dist/
+build/
+coverage/
+.tmp/
+temp/
+.cache/
+.vite/
+out/
+
+# Entorno
+.env
+**/.env
+.env.*
+!.env.example
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+backend/genera-hash.mjs

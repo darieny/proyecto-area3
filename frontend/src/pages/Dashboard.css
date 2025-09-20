@@ -1,0 +1,15 @@
+.dash {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: #f7f8fb;
+}
+.dash-card {
+  background: #fff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  text-align: center;
+}
+.dash-card h1 { margin: 0 0 8px; }
+.dash-card p  { margin: 0; color: #6b7280; }
