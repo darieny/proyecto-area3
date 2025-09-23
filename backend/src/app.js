@@ -19,11 +19,11 @@ app.use(cookieParser());
 app.use(express.json());
 
 // Rutas de prueba/health
-app.get('/api/health', (_req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'backend-area3' });
 });
 
-app.get('/api/db-ping', async (_req, res) => {
+app.get('/db-ping', async (_req, res) => {
   try {
     const now = await pingDb();
     res.json({ ok: true, now });
@@ -32,6 +32,6 @@ app.get('/api/db-ping', async (_req, res) => {
   }
 });
 
-app.use('/api', apiRoutes);
+app.use('/', apiRoutes);
 
 export default app;
