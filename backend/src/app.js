@@ -19,11 +19,11 @@ app.use(cookieParser());
 app.use(express.json());
 
 // Rutas de prueba/health
-app.get('/health', (_req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'backend-area3' });
 });
 
-app.get('/db-ping', async (_req, res) => {
+app.get('/api/db-ping', async (_req, res) => {
   try {
     const now = await pingDb();
     res.json({ ok: true, now });
@@ -35,6 +35,6 @@ app.get('/db-ping', async (_req, res) => {
 // Monta tus rutas reales SIN prefijo '/api' para evitar /api/api
 // Si dentro de routes/index.js ya usas subrutas (/auth, /roles, etc.),
 // quedarán accesibles como: https://<tu-backend>.vercel.app/auth, /roles, ...
-app.use('/', apiRoutes);
+app.use('/api', apiRoutes);
 
 export default app;
