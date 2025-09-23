@@ -1,8 +1,6 @@
-// src/config/db.js
 import 'dotenv/config';
 import { Pool } from 'pg';
 
-// Usa DATABASE_URL de Vercel Postgres (Neon)
 const { DATABASE_URL } = process.env;
 
 if (!DATABASE_URL) {
@@ -11,7 +9,6 @@ if (!DATABASE_URL) {
 
 export const pool = new Pool({
   connectionString: DATABASE_URL,
-  // Si tu proveedor requiriera SSL explícito adicional, descomenta:
   // ssl: { rejectUnauthorized: false },
   keepAlive: true,
 });
