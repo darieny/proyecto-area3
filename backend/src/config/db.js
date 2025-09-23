@@ -1,20 +1,19 @@
+// src/config/db.js
 import 'dotenv/config';
 import { Pool } from 'pg';
 
-const {
-  DB_HOST = "localhost",
-  DB_PORT = '5432',
-  DB_NAME,
-  DB_USER,
-  DB_PASS
-} = process.env;
+// Usa DATABASE_URL de Vercel Postgres (Neon)
+const { DATABASE_URL } = process.env;
+
+if (!DATABASE_URL) {
+  console.warn('DATABASE_URL no está definida. Endpoints que tocan DB fallarán.');
+}
 
 export const pool = new Pool({
-  host: process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? 5432),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME
+  connectionString: DATABASE_URL,
+  // Si tu proveedor requiriera SSL explícito adicional, descomenta:
+  // ssl: { rejectUnauthorized: false },
+  keepAlive: true,
 });
 
 export async function pingDb() {
@@ -25,3 +24,4 @@ export async function pingDb() {
 export function query(text, params) {
   return pool.query(text, params);
 }
+
