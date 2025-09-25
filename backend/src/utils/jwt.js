@@ -1,15 +1,18 @@
 import jwt from 'jsonwebtoken';
 
-const { JWT_SECRET } = process.env;
-
-if (!JWT_SECRET) {
-  console.warn('JWT_SECRET no está definida en el backend de Vercel.');
+export function signAccessToken(payload) {
+  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
+    expiresIn: process.env.ACCESS_TOKEN_TTL || '15m',
+  });
 }
-
-export function signAccess(payload, options = {}) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '2h', ...options });
+export function signRefreshToken(payload) {
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: process.env.REFRESH_TOKEN_TTL || '7d',
+  });
 }
-
 export function verifyAccess(token) {
-  return jwt.verify(token, JWT_SECRET);
+  return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+}
+export function verifyRefresh(token) {
+  return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 }
