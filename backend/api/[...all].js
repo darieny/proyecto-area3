@@ -1,5 +1,7 @@
-// api/index.js
+// backend/api/[...all].js
 import app from '../src/app.js';
 
-// Vercel usará esta exportación como handler serverless
-export default app;
+export default function handler(req, res) {
+  return app(req, res);
+}
+
