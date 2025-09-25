@@ -6,22 +6,20 @@ import bcrypt from 'bcryptjs';
 
 import { pingDb, query } from './config/db.js';
 import { signAccess } from './utils/jwt.js';
+// Si quieres, puedes dejar el router de roles.
+// El de auth lo omitimos para evitar el 404 por ahora.
 import rolesRoutes from './routes/roles.routes.js';
+// import authRoutes from './routes/auth.routes.js';
 
 const app = express();
 
-/* ===================== CORS abierto (Bearer) ===================== */
-/* Usamos '*', y credentials:false porque NO usamos cookies httpOnly. */
-const corsOptions = {
-  origin: '*',
-  credentials: false,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-};
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // responder preflight
-/* ================================================================ */
+// Cuando subas el front a Vercel, cambia FRONTEND_ORIGIN por su dominio.
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '*';
 
+app.use(cors({
+  origin: FRONTEND_ORIGIN === '*' ? true : FRONTEND_ORIGIN,
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json());
 
@@ -45,6 +43,10 @@ app.get('/db-ping', async (_req, res) => {
   }
 });
 
+//
+// LOGIN DIRECTO (unificado)
+// POST https://<app>.vercel.app/api/login
+// y alias: POST https://<app>.vercel.app/api/auth/login
 //
 const loginHandler = async (req, res) => {
   try {
@@ -89,15 +91,17 @@ const loginHandler = async (req, res) => {
       },
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    res.status(500).json({ error: e.message });
   }
 };
 
 app.post('/login', loginHandler);        // ruta principal
-app.post('/auth/login', loginHandler);   // alias (compatibilidad)
+app.post('/auth/login', loginHandler);   // alias (útil si ya lo usaba tu front)
+
+// Rutas de negocio (quedan bajo /api/* gracias a api/[...all].js)
 app.use('/roles', rolesRoutes);
+// app.use('/auth', authRoutes); // déjalo comentado por ahora
 
 export default app;
-
 
 

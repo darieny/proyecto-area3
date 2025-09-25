@@ -1,15 +1,15 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
 import { signAccess } from '../utils/jwt.js';
 import { requireAuth } from '../middleware/auth.js';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// (opcional) ping para verificar montaje
-router.get('/', (_req, res) => res.json({ ok: true, router: 'auth' }));
-
-// POST /api/auth/login
+/** POST /api/auth/login
+ * body: { correo, password }
+ * res: { ok, token, user }
+ */
 router.post('/login', async (req, res) => {
   try {
     const { correo, password } = req.body || {};
@@ -28,7 +28,9 @@ router.post('/login', async (req, res) => {
     );
 
     const user = rows[0];
-    if (!user || !user.activo) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!user || !user.activo) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Credenciales inválidas' });
@@ -55,7 +57,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET /api/auth/me (protegida)
+/** GET /api/auth/me (protegida) */
 router.get('/me', requireAuth, (req, res) => {
   res.json({ ok: true, user: req.user });
 });
