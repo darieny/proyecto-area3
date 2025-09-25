@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { pingDb } from './config/db.js';
 
 const app = express();
 
@@ -21,6 +22,15 @@ app.get('/', (_req, res) => {
 // GET https://<tuapp>.vercel.app/api/health
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'backend-area3' });
+});
+
+app.get('/db-ping', async (_req, res) => {
+  try {
+    const now = await pingDb();
+    res.json({ ok: true, now });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 export default app;
