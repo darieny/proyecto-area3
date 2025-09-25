@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { pingDb } from './config/db.js';
+import authRoutes from './routes/auth.routes.js';
+import rolesRoutes from './routes/roles.routes.js';
 
 const app = express();
 
