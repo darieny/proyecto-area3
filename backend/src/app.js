@@ -34,23 +34,4 @@ app.get('/api/db-ping', async (_req, res) => {
 
 app.use('/api', apiRoutes);
 
-// --- SOLO PARA DEPURACIÓN ---
-function listRoutes(app) {
-  const out = [];
-  app._router.stack.forEach(m => {
-    if (m.route) {
-      out.push(`${Object.keys(m.route.methods).join(',').toUpperCase()} ${m.route.path}`);
-    } else if (m.name === 'router' && m.handle.stack) {
-      m.handle.stack.forEach(s => {
-        if (s.route) {
-          out.push(`${Object.keys(s.route.methods).join(',').toUpperCase()} ${s.route.path}`);
-        }
-      });
-    }
-  });
-  console.log('ROUTES:\n' + out.join('\n'));
-}
-listRoutes(app);
-// ----------------------------
-
 export default app;
