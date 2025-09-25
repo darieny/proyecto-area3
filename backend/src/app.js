@@ -33,5 +33,9 @@ app.get('/db-ping', async (_req, res) => {
   }
 });
 
+// Rutas de negocio (ya quedan expuestas bajo /api/*)
+app.use('/auth', authRoutes);
+app.use('/roles', rolesRoutes);
+
 export default app;
 
