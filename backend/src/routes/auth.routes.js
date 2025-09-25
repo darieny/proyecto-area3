@@ -1,11 +1,13 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { query } from '../config/db.js';
 import { signAccessToken, signRefreshToken, verifyRefresh } from '../utils/jwt.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 const router = Router();
+
+router.get('/ping', (req, res) => res.json({ ok: true, where: 'auth' }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
