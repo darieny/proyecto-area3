@@ -6,10 +6,9 @@ import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-/** POST /api/auth/login
- * body: { correo, password }
- * res: { ok, token, user }
- */
+// Ping para verificar montaje
+router.get('/', (_req, res) => res.json({ ok: true, router: 'auth' }));
+
 router.post('/login', async (req, res) => {
   try {
     const { correo, password } = req.body || {};
