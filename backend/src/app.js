@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { pingDb } from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import rolesRoutes from './routes/roles.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js'
 
 const app = express();
 
@@ -34,12 +35,8 @@ app.get('/db-ping', async (_req, res) => {
 
 app.use('/auth', authRoutes);
 app.use('/roles', rolesRoutes);
+app.use('/dashboard', dashboardRoutes);
 
-// Alias temporal: /api/login → /api/auth/login
-app.post('/login', (req, res, next) => {
-  req.url = '/login';
-  return authRoutes(req, res, next);
-});
 
 export default app;
 
