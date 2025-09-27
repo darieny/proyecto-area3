@@ -4,7 +4,7 @@ import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import KpiCard from '../components/KpiCard';
 import MiniTrend from '../components/MiniTrend';
 import UltimasVisitas from '../components/UltimasVisitas';
-import '../css/Dashboard';
+import '../css/dashboard.css';
 
 export default function DashboardAdmin() {
   const { user } = useAuth();
