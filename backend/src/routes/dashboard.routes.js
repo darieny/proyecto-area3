@@ -8,7 +8,7 @@ const r = Router();
 // Solo usuarios autenticados con rol admin
 r.use(requireAuth, requireRole(['admin']));
 
-r.get('/admin/summary', adminSummary);
-r.get('/admin/ultimas-visitas', latestVisits);
+r.get('/dashboard/admin/summary', adminSummary);
+r.get('/dashboard/admin/ultimas-visitas', latestVisits);
 
 export default r;
