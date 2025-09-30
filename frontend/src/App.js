@@ -1,25 +1,64 @@
+// src/App.js
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import RequireAuth from './router/RequireAuth';
+import RequireRole from './router/RequireRole';
+
+// Páginas base
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
-import Dashboard from './pages/Dashboard';
+
+// Dashboard Admin
+import DashboardAdmin from './modules/dashboard/pages/DashboardAdmin';
+
+// Redirección automática según rol
+function RoleRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+
+  const rol = String(user.rol || '').toLowerCase();
+  if (rol === 'admin')       return <Navigate to="/dashboard" replace />;
+  if (rol === 'supervisor')  return <Navigate to="/supervisor" replace />;
+  if (rol === 'técnico' || rol === 'tecnico') return <Navigate to="/tecnico" replace />;
+
+  return <Navigate to="/login" replace />;
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/cambiar-password" element={<ChangePassword />} />
+
+          {/* protegidas */}
           <Route element={<RequireAuth />}>
-          <Route path='/' element={<Dashboard />} />
+            {/* / -> redirige por rol */}
+            <Route index element={<RoleRedirect />} />
+
+            {/* Admin */}
+            <Route
+              path="/dashboard"
+              element={
+                <RequireRole role="admin">
+                  <DashboardAdmin />
+                </RequireRole>
+              }
+            />
+
+            {/* placeholders para luego */}
+            {/* <Route path="/supervisor" element={<RequireRole role="supervisor"><SupervisorHome/></RequireRole>} /> */}
+            {/* <Route path="/tecnico"    element={<RequireRole role="tecnico"><TecnicoHome/></RequireRole>} /> */}
           </Route>
-          {/* Fallback: cualquier ruta desconocida te manda al login */}
+
+          {/* fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
+
 

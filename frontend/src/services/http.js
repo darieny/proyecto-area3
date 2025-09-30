@@ -1,11 +1,22 @@
 import axios from 'axios';
 
+const BASE = (process.env.REACT_APP_API_URL || 'http://localhost:3000/api').replace(/\/+$/, '');
+
 export const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
-  withCredentials: true, // manda/recibe cookies httpOnly
+  baseURL: BASE,
+  withCredentials: true, // no estorba si también usas Authorization
 });
 
-// Reintenta una vez con /auth/refresh cuando reciba 401
+// ===== Manejo de token en header Authorization =====
+export function setAuthToken(token) {
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
+}
+
+// ===== (opcional) refresco por cookie si tu backend lo soporta =====
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -23,3 +34,4 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+

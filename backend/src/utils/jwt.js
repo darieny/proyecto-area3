@@ -13,7 +13,7 @@ const ACCESS_SECRET = JWT_ACCESS_SECRET || JWT_SECRET;
 
 if (!ACCESS_SECRET) {
   console.warn(
-    '⚠️ No hay ACCESS_SECRET (define JWT_ACCESS_SECRET o JWT_SECRET en Vercel).'
+    'No hay ACCESS_SECRET (define JWT_ACCESS_SECRET o JWT_SECRET en Vercel).'
   );
 }
 
