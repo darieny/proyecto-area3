@@ -13,8 +13,8 @@ export function useAdminDashboard() {
       try {
         setLoading(true);
         const [s, l] = await Promise.all([
-          api.get('/api/dashboard/admin/summary'),
-          api.get('/api/dashboard/admin/ultimas-visitas', { params: { limit: 3 } }),
+          api.get('/dashboard/admin/summary'),
+          api.get('/dashboard/admin/ultimas-visitas', { params: { limit: 3 } }),
         ]);
         if (alive) {
           setSummary(s.data);
