@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import { pingDb } from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import rolesRoutes from './routes/roles.routes.js';
-import dashboardRoutes from './routes/dashboard.routes..js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
 const app = express();
 
