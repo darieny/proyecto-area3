@@ -15,22 +15,27 @@ export function AuthProvider({ children }) {
     (async () => {
       try {
         const saved = localStorage.getItem(TOKEN_KEY);
-        if (saved) setAuthToken(saved);
-        const { data } = await api.get('/auth/me');
-        setUser(data.user);
-      } catch {
+        if (saved) {
+          setAuthToken(saved);
+          const { data } = await api.get('/auth/me');
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('AuthContext: error al validar token', err);
         setUser(null);
-        setAuthToken(null);
         localStorage.removeItem(TOKEN_KEY);
+        setAuthToken(null);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
+  // --- LOGIN ---
   async function login(correo, password) {
     const { data } = await api.post('/auth/login', { correo, password });
-    // se espera { token, user }
     if (data.token) {
       localStorage.setItem(TOKEN_KEY, data.token);
       setAuthToken(data.token);
@@ -39,11 +44,15 @@ export function AuthProvider({ children }) {
     return data.user;
   }
 
+  // --- LOGOUT ---
   async function logout() {
-    try { await api.post('/auth/logout'); } catch {}
-    localStorage.removeItem(TOKEN_KEY);
-    setAuthToken(null);
-    setUser(null);
+    try {
+      await api.post('/auth/logout').catch(() => {});
+    } finally {
+      localStorage.removeItem(TOKEN_KEY);
+      setAuthToken(null);
+      setUser(null);
+    }
   }
 
   return (
@@ -52,4 +61,5 @@ export function AuthProvider({ children }) {
     </AuthCtx.Provider>
   );
 }
+
 
