@@ -7,10 +7,16 @@ const r = Router();
 
 r.get('/ping', (_req, res) => res.json({ ok: true, route: '/dashboard/ping' }));
 
+// >>> BYPASS de preflight antes de la auth <<<
+r.use((req, res, next) => {
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 // Solo usuarios autenticados con rol admin
 r.use(requireAuth, requireRole(['admin']));
 
-r.get('/dashboard/admin/summary', adminSummary);
-r.get('/dashboard/admin/ultimas-visitas', latestVisits);
+r.get('/admin/summary', adminSummary);
+r.get('/admin/ultimas-visitas', latestVisits);
 
 export default r;
