@@ -1,8 +1,6 @@
-// backend/api/[...all].js
 import app from '../src/app.js';
-export default function handler(req, res) {
-  return app(req, res); // NO toques req.url
-}
+export default (req, res) => app(req, res); // sin tocar req.url
+
 
 
 
