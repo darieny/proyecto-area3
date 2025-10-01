@@ -16,16 +16,14 @@ app.use(cors({ origin: FRONTEND_ORIGIN === '*' ? true : FRONTEND_ORIGIN, credent
 app.use(cookieParser());
 app.use(express.json());
 
-// Raíz de la función (/api)
+// Pings /health
 app.get('/', (_req, res) => {
-  res.type('text').send('conexión lista');
-});
-
-app.get('/health', (_req, res) => {
+  res.type('text').send('conexión lista');});
+app.get('/api', (_req, res) => res.type('text').send('api viva'));
+app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'backend-area3' });
 });
-
-app.get('/db-ping', async (_req, res) => {
+app.get('/api/db-ping', async (_req, res) => {
   try {
     const now = await pingDb();
     res.json({ ok: true, now });
@@ -34,10 +32,10 @@ app.get('/db-ping', async (_req, res) => {
   }
 });
 
-app.use('/auth', authRoutes);
-app.use('/roles', rolesRoutes);
-app.use('/dashboard', dashboardRoutes);
-app.use('/clientes', clientesRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/roles', rolesRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/clientes', clientesRoutes);
 
 // Alias temporal: /api/login → /api/auth/login
 app.post('/login', (req, res, next) => {
