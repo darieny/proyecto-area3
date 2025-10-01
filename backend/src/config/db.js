@@ -1,4 +1,3 @@
-// backend/src/config/db.js
 import 'dotenv/config';
 import { Pool } from 'pg';
 
@@ -6,7 +5,7 @@ function makePool() {
   const url = process.env.DATABASE_URL;
 
   if (url) {
-    // Producción (Neon/Vercel) o cuando quieras usar la URL completa.
+    // Producción (Neon/Vercel) o cuando se quiera usar la URL completa.
     // Activa SSL si la URL lo pide o lo fuerza una env.
     const needSSL =
       /sslmode=require/i.test(url) ||
