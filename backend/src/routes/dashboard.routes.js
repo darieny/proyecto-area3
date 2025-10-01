@@ -5,6 +5,8 @@ import { adminSummary, latestVisits } from '../controllers/dashboard.controller.
 
 const r = Router();
 
+r.get('/ping', (_req, res) => res.json({ ok: true, route: '/dashboard/ping' }));
+
 // Solo usuarios autenticados con rol admin
 r.use(requireAuth, requireRole(['admin']));
 

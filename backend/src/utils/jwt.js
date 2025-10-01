@@ -25,7 +25,7 @@ export function verifyAccess(token) {
   return jwt.verify(token, ACCESS_SECRET);
 }
 
-// Soporte para refresh (lo puedes usar más adelante)
+// Soporte para refresh
 export function signRefresh(payload, options = {}) {
   if (!JWT_REFRESH_SECRET) {
     throw new Error('JWT_REFRESH_SECRET no está definida');
