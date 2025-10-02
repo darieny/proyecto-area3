@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const BASE = (process.env.REACT_APP_API_URL || 'http://localhost:3000/api').replace(/\/+$/, '');
 
+console.log("API BASE URL:", BASE);
 export const api = axios.create({
   baseURL: BASE,
   withCredentials: true, // no estorba si también usas Authorization
