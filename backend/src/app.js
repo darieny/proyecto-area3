@@ -16,6 +16,11 @@ app.use(cors({ origin: FRONTEND_ORIGIN === '*' ? true : FRONTEND_ORIGIN, credent
 app.use(cookieParser());
 app.use(express.json());
 
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 // Pings /health
 app.get('/', (_req, res) => {
   res.type('text').send('conexión lista');});
