@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import KpiCard from '../components/KpiCard';
@@ -13,12 +14,22 @@ export default function DashboardAdmin() {
   const { summary, latest, loading, err } = useAdminDashboard();
   const k = summary?.kpis ?? {};
 
+  // NUEVO: estados del menú
+  const [collapsed, setCollapsed] = useState(false); // desktop
+  const [mobileOpen, setMobileOpen] = useState(false); // móvil
+
   return (
-    <div className="shell">
-      <Sidebar />
+    <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={() => setMobileOpen(false)} /* cerrar al navegar en móvil */
+      />
 
       <main className="main">
-        <Topbar />
+        <Topbar
+          onToggleCollapse={() => setCollapsed(v => !v)}
+          onToggleMobile={() => setMobileOpen(v => !v)}
+        />
 
         <div className="dash">
           {loading && <div className="skeleton">Cargando dashboard…</div>}
@@ -27,30 +38,28 @@ export default function DashboardAdmin() {
           {!loading && !err && (
             <>
               <h2 className="greet">¡Hola, {user?.nombre_completo || 'Administrador'}! 🎉</h2>
-
-              {/* KPIs */}
+            {/**KPIs */}
               <section className="dash__kpis">
                 <KpiCard title="Visitas programadas" value={k.programadas} accent="peach" />
                 <KpiCard title="Visitas completadas" value={k.completadas} accent="blue" />
                 <KpiCard title="Visitas pendientes"  value={k.pendientes}  accent="lilac" />
               </section>
 
-              {/* Estadísticas */}
+            {/**Estadisticas */}
               <section className="grid2">
                 <div className="panel">
                   <div className="panel__title">Visitas en el mes</div>
                   <div className="panel__big">{k.visitasMes}</div>
-                  <MiniTrend note="+2% Past month" />
+                  <MiniTrend note="+2% Del mes pasado" />
                 </div>
 
                 <div className="panel">
                   <div className="panel__title">Visitas en la semana</div>
                   <div className="panel__big">{k.visitasSemana}</div>
-                  <MiniTrend note="+5% Past month" />
+                  <MiniTrend note="+5% Del mes pasado" />
                 </div>
               </section>
-
-              {/* Últimas visitas + Calendario */}
+              {/** Ultimas visitas + Calendario */}
               <section className="dash__bottom">
                 <UltimasVisitas items={latest} />
                 <CalendarWidget />
