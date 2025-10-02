@@ -37,12 +37,6 @@ app.use('/api/roles', rolesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clientes', clientesRoutes);
 
-// Alias temporal: /api/login → /api/auth/login
-app.post('/login', (req, res, next) => {
-  req.url = '/login';
-  return authRoutes(req, res, next);
-});
-
 export default app;
 
 
