@@ -7,6 +7,11 @@ const r = Router();
 
 r.get('/ping', (_req, res) => res.json({ ok: true, route: '/dashboard/ping' }));
 
+// raíz del módulo: responde a GET /api/dashboard
+r.get('/', (_req, res) => {
+  res.json({ ok: true, module: 'dashboard', msg: 'dashboard root' });
+});
+
 // >>> BYPASS de preflight antes de la auth <<<
 r.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
