@@ -5,6 +5,7 @@ import { useClientes } from "../hooks/useClientes.js";
 import ClienteKpis from "../components/ClienteKpis";
 import ClientesTable from "../components/ClientesTable";
 import { api } from "../../../services/http.js";
+import ModalPortal from "../../clientes/components/ModalPortal.jsx";
 import "../css/Clientes.css";
 
 const PAGE_SIZE = 10;
@@ -14,18 +15,14 @@ export default function ClientesPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const [search, setSearch] = useState("");
-  const [order, setOrder] = useState("recientes"); // 'recientes'|'nombre_asc'|'nombre_desc'
+  const [order, setOrder] = useState("recientes");
   const [page, setPage] = useState(1);
 
-  // tick para forzar refetch luego de crear
+  // para refetch tras crear
   const [refreshTick, setRefreshTick] = useState(0);
 
   const { kpis, items, meta, loading, err } = useClientes({
-    search,
-    order,
-    page,
-    pageSize: PAGE_SIZE,
-    refreshTick,
+    search, order, page, pageSize: PAGE_SIZE, refreshTick,
   });
 
   // ======= Modal: estado y handlers =======
@@ -54,6 +51,8 @@ export default function ClientesPage() {
       departamento: "",
       notas: "",
       estado: "activo",
+      direccion_linea1: "",
+      direccion_linea2: "",
     });
     setShowModal(true);
   }
@@ -66,7 +65,6 @@ export default function ClientesPage() {
   async function handleCreate(e) {
     e.preventDefault();
     if (!form.nombre.trim()) return;
-
     try {
       setSaving(true);
       await api.post("/clientes", {
@@ -78,11 +76,12 @@ export default function ClientesPage() {
         departamento: form.departamento || null,
         notas: form.notas || null,
         estado: form.estado || "activo",
+        direccion_linea1: form.direccion_linea1 || null,   // <-- faltaban
+        direccion_linea2: form.direccion_linea2 || null,   // <-- faltaban
       });
-
       setShowModal(false);
-      setPage(1); // vuelve a la primera página
-      setRefreshTick((t) => t + 1); // fuerza refetch
+      setPage(1);
+      setRefreshTick((t) => t + 1);
     } catch (err) {
       console.error("Error creando cliente", err);
       alert("No se pudo crear el cliente");
@@ -92,16 +91,12 @@ export default function ClientesPage() {
   }
 
   return (
-    <div
-      className={`shell ${collapsed ? "is-collapsed" : ""} ${
-        mobileOpen ? "menu-open" : ""
-      }`}
-    >
+    <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
       <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
       <main className="main">
         <Topbar
-          onToggleCollapse={() => setCollapsed((v) => !v)}
-          onToggleMobile={() => setMobileOpen((v) => !v)}
+          onToggleCollapse={() => setCollapsed(v => !v)}
+          onToggleMobile={() => setMobileOpen(v => !v)}
         />
 
         <div className="clientes">
@@ -117,47 +112,33 @@ export default function ClientesPage() {
                   <h2>Clientes</h2>
 
                   <div className="clientes__actions">
-                    {/* Botón agregar */}
                     <button className="btn-primary" onClick={openModal}>
                       + Agregar Cliente
                     </button>
 
-                    {/* Buscador */}
                     <div className="input-search">
                       <span className="ico">🔍</span>
                       <input
                         value={search}
-                        onChange={(e) => {
-                          setSearch(e.target.value);
-                          setPage(1);
-                        }}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         placeholder="Buscar"
                       />
                     </div>
 
-                    {/* Filtro / Orden */}
                     <div className="dropdown">
                       <button className="btn-filter">
                         Filtrar por:{" "}
                         <strong>
-                          {order === "recientes"
-                            ? "Recientes"
-                            : order === "nombre_asc"
-                            ? "Nombre (A–Z)"
+                          {order === "recientes" ? "Recientes"
+                            : order === "nombre_asc" ? "Nombre (A–Z)"
                             : "Nombre (Z–A)"}
                         </strong>{" "}
                         ▾
                       </button>
                       <div className="dropdown__menu">
-                        <button onClick={() => setOrder("recientes")}>
-                          Recientes
-                        </button>
-                        <button onClick={() => setOrder("nombre_asc")}>
-                          Nombre (A–Z)
-                        </button>
-                        <button onClick={() => setOrder("nombre_desc")}>
-                          Nombre (Z–A)
-                        </button>
+                        <button onClick={() => setOrder("recientes")}>Recientes</button>
+                        <button onClick={() => setOrder("nombre_asc")}>Nombre (A–Z)</button>
+                        <button onClick={() => setOrder("nombre_desc")}>Nombre (Z–A)</button>
                       </div>
                     </div>
                   </div>
@@ -165,16 +146,9 @@ export default function ClientesPage() {
 
                 <ClientesTable items={items} />
 
-                {/* Paginación mockup */}
                 <footer className="pager">
-                  <button
-                    disabled={meta.page <= 1}
-                    onClick={() => setPage(meta.page - 1)}
-                  >
-                    ‹
-                  </button>
+                  <button disabled={meta.page <= 1} onClick={() => setPage(meta.page - 1)}>‹</button>
 
-                  {/* primeras páginas visibles */}
                   {[...Array(Math.min(5, meta.totalPages))].map((_, i) => {
                     const p = i + 1;
                     return (
@@ -182,33 +156,24 @@ export default function ClientesPage() {
                         key={p}
                         className={p === meta.page ? "is-active" : ""}
                         onClick={() => setPage(p)}
-                      >
-                        {p}
-                      </button>
+                      >{p}</button>
                     );
                   })}
 
-                  {/* elipsis + última página si aplica */}
                   {meta.totalPages > 5 && (
                     <>
                       <span className="ellipsis">…</span>
                       <button
-                        className={
-                          meta.page === meta.totalPages ? "is-active" : ""
-                        }
+                        className={meta.page === meta.totalPages ? "is-active" : ""}
                         onClick={() => setPage(meta.totalPages)}
-                      >
-                        {meta.totalPages}
-                      </button>
+                      >{meta.totalPages}</button>
                     </>
                   )}
 
                   <button
                     disabled={meta.page >= meta.totalPages}
                     onClick={() => setPage(meta.page + 1)}
-                  >
-                    ›
-                  </button>
+                  >›</button>
                 </footer>
               </section>
             </>
@@ -216,168 +181,101 @@ export default function ClientesPage() {
         </div>
       </main>
 
-      {/* ===== Modal Crear Cliente (estilo mockup) ===== */}
-      {showModal && (
-        <div
-          className="m-overlay"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setShowModal(false)}
-        >
-          <div className="m-panel" onClick={(e) => e.stopPropagation()}>
-            <header className="m-head">
-              <div className="m-head__left">
-                <span className="m-head__icon">🧾</span>
-                <h3>Agregar nuevo cliente</h3>
-              </div>
-              <button
-                className="m-close"
-                aria-label="Cerrar"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </header>
-
-            <form onSubmit={handleCreate} className="m-form">
-              <label className="field full">
-                <span className="field__label">Nombre *</span>
-                <div className="field__control">
-                  <input
-                    name="nombre"
-                    value={form.nombre}
-                    onChange={onChange}
-                    required
-                    placeholder="Ej: Farmacia La Fe"
-                  />
-                </div>
-              </label>
-
-              <label className="field half">
-                <span className="field__label">Correo</span>
-                <div className="field__control">
-                  <input
-                    name="correo"
-                    type="email"
-                    value={form.correo}
-                    onChange={onChange}
-                    placeholder="correo@ejemplo.com"
-                  />
-                </div>
-              </label>
-
-              <label className="field half">
-                <span className="field__label">Teléfono</span>
-                <div className="field__control">
-                  <input
-                    name="telefono"
-                    value={form.telefono}
-                    onChange={onChange}
-                    placeholder="5555-0000"
-                  />
-                </div>
-              </label>
-
-              <label className="field full">
-                <span className="field__label">Dirección</span>
-                <div className="field__control">
-                  <input
-                    name="direccion_linea1"
-                    value={form.direccion_linea1 || ""}
-                    onChange={onChange}
-                    placeholder="Calle y número"
-                  />
-                </div>
-              </label>
-
-              <label className="field full">
-                <span className="field__label">Dirección (opcional)</span>
-                <div className="field__control">
-                  <input
-                    name="direccion_linea2"
-                    value={form.direccion_linea2 || ""}
-                    onChange={onChange}
-                    placeholder="Colonia, referencia, etc."
-                  />
-                </div>
-              </label>
-
-              <label className="field half">
-                <span className="field__label">Ciudad</span>
-                <div className="field__control">
-                  <input
-                    name="ciudad"
-                    value={form.ciudad}
-                    onChange={onChange}
-                    placeholder="Ej: Chiquimula"
-                  />
-                </div>
-              </label>
-
-              <label className="field half">
-                <span className="field__label">Departamento</span>
-                <div className="field__control">
-                  <input
-                    name="departamento"
-                    value={form.departamento}
-                    onChange={onChange}
-                    placeholder="Ej: Guatemala"
-                  />
-                </div>
-              </label>
-
-              <label className="field half">
-                <span className="field__label">NIT / Empresa</span>
-                <div className="field__control">
-                  <input
-                    name="nit"
-                    value={form.nit}
-                    onChange={onChange}
-                    placeholder="NIT o nombre de empresa"
-                  />
-                </div>
-              </label>
-
-              <label className="field half">
-                <span className="field__label">Estado</span>
-                <div className="field__control">
-                  <select name="estado" value={form.estado} onChange={onChange}>
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                  </select>
-                </div>
-              </label>
-
-              <label className="field full">
-                <span className="field__label">Observaciones</span>
-                <div className="field__control">
-                  <textarea
-                    name="notas"
-                    rows={4}
-                    value={form.notas}
-                    onChange={onChange}
-                    placeholder="Notas u observaciones del cliente"
-                  />
-                </div>
-              </label>
-
-              <div className="m-actions full">
-                <button
-                  type="button"
-                  className="btn-light"
-                  onClick={() => setShowModal(false)}
-                  disabled={saving}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Guardando…" : "Guardar cliente"}
-                </button>
-              </div>
-            </form>
+      {/* ===== Modal (en portal) ===== */}
+      <ModalPortal open={showModal} onClose={() => setShowModal(false)}>
+        <header className="m-head">
+          <div className="m-head__left">
+            <span className="m-head__icon">🧾</span>
+            <h3>Agregar nuevo cliente</h3>
           </div>
-        </div>
-      )}
+          <button className="m-close" aria-label="Cerrar" onClick={() => setShowModal(false)}>×</button>
+        </header>
+
+        <form onSubmit={handleCreate} className="m-form">
+          <label className="field full">
+            <span className="field__label">Nombre *</span>
+            <div className="field__control">
+              <input name="nombre" value={form.nombre} onChange={onChange} required placeholder="Ej: Farmacia La Fe" />
+            </div>
+          </label>
+
+          <label className="field half">
+            <span className="field__label">Correo</span>
+            <div className="field__control">
+              <input name="correo" type="email" value={form.correo} onChange={onChange} placeholder="correo@ejemplo.com" />
+            </div>
+          </label>
+
+          <label className="field half">
+            <span className="field__label">Teléfono</span>
+            <div className="field__control">
+              <input name="telefono" value={form.telefono} onChange={onChange} placeholder="5555-0000" />
+            </div>
+          </label>
+
+          <label className="field full">
+            <span className="field__label">Dirección</span>
+            <div className="field__control">
+              <input name="direccion_linea1" value={form.direccion_linea1} onChange={onChange} placeholder="Calle y número" />
+            </div>
+          </label>
+
+          <label className="field full">
+            <span className="field__label">Dirección (opcional)</span>
+            <div className="field__control">
+              <input name="direccion_linea2" value={form.direccion_linea2} onChange={onChange} placeholder="Colonia, referencia, etc." />
+            </div>
+          </label>
+
+          <label className="field half">
+            <span className="field__label">Ciudad</span>
+            <div className="field__control">
+              <input name="ciudad" value={form.ciudad} onChange={onChange} placeholder="Ej: Chiquimula" />
+            </div>
+          </label>
+
+          <label className="field half">
+            <span className="field__label">Departamento</span>
+            <div className="field__control">
+              <input name="departamento" value={form.departamento} onChange={onChange} placeholder="Ej: Guatemala" />
+            </div>
+          </label>
+
+          <label className="field half">
+            <span className="field__label">NIT / Empresa</span>
+            <div className="field__control">
+              <input name="nit" value={form.nit} onChange={onChange} placeholder="NIT o nombre de empresa" />
+            </div>
+          </label>
+
+          <label className="field half">
+            <span className="field__label">Estado</span>
+            <div className="field__control">
+              <select name="estado" value={form.estado} onChange={onChange}>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+          </label>
+
+          <label className="field full">
+            <span className="field__label">Observaciones</span>
+            <div className="field__control">
+              <textarea name="notas" rows={4} value={form.notas} onChange={onChange} placeholder="Notas u observaciones del cliente" />
+            </div>
+          </label>
+
+          <div className="m-actions full">
+            <button type="button" className="btn-light" onClick={() => setShowModal(false)} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar cliente"}
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
     </div>
   );
 }
+
