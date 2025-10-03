@@ -21,10 +21,10 @@ export default function Sidebar({ collapsed, onNavigate }) {
           <span className="sb__text">Usuarios</span>
         </button>
 
-        <button className="sb__item" type="button" onClick={onNavigate}>
+        <NavLink to="/clientes" className={linkClass} onClick={onNavigate}>
           <span className="ico">🏪</span>
           <span className="sb__text">Clientes</span>
-        </button>
+        </NavLink>
 
         <button className="sb__item" type="button" onClick={onNavigate}>
           <span className="ico">📊</span>

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import RequireAuth from './router/RequireAuth';
 import RequireRole from './router/RequireRole';
+import Clientes from './modules/clientes/pages/Clientes';
 
 // Páginas base
 import Login from './pages/Login';
@@ -44,6 +45,14 @@ export default function App() {
               element={
                 <RequireRole role="admin">
                   <DashboardAdmin />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/clientes"
+              element={
+                <RequireRole role="admin">
+                  <Clientes />
                 </RequireRole>
               }
             />
