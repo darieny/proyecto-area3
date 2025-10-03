@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import RequireAuth from './router/RequireAuth';
 import RequireRole from './router/RequireRole';
 import Clientes from './modules/clientes/pages/Clientes';
+import ClienteDetail from './modules/clientes/pages/ClientesDetail';
 
 // Páginas base
 import Login from './pages/Login';
@@ -18,8 +19,8 @@ function RoleRedirect() {
   if (!user) return <Navigate to="/login" replace />;
 
   const rol = String(user.rol || '').toLowerCase();
-  if (rol === 'admin')       return <Navigate to="/dashboard" replace />;
-  if (rol === 'supervisor')  return <Navigate to="/supervisor" replace />;
+  if (rol === 'admin') return <Navigate to="/dashboard" replace />;
+  if (rol === 'supervisor') return <Navigate to="/supervisor" replace />;
   if (rol === 'técnico' || rol === 'tecnico') return <Navigate to="/tecnico" replace />;
 
   return <Navigate to="/login" replace />;
@@ -53,6 +54,14 @@ export default function App() {
               element={
                 <RequireRole role="admin">
                   <Clientes />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/clientes/:id"
+              element={
+                <RequireRole role="admin">
+                  <ClienteDetail />
                 </RequireRole>
               }
             />
