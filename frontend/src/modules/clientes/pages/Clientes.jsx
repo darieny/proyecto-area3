@@ -40,6 +40,8 @@ export default function ClientesPage() {
     departamento: "",
     notas: "",
     estado: "activo",
+    direccion_linea1: "",
+    direccion_linea2: "",
   });
 
   function openModal() {
@@ -79,7 +81,7 @@ export default function ClientesPage() {
       });
 
       setShowModal(false);
-      setPage(1);                 // vuelve a la primera página
+      setPage(1); // vuelve a la primera página
       setRefreshTick((t) => t + 1); // fuerza refetch
     } catch (err) {
       console.error("Error creando cliente", err);
@@ -214,71 +216,152 @@ export default function ClientesPage() {
         </div>
       </main>
 
-      {/* ===== Modal Crear Cliente ===== */}
+      {/* ===== Modal Crear Cliente (estilo mockup) ===== */}
       {showModal && (
-        <div className="modal" role="dialog" aria-modal="true">
-          <div className="modal__content">
-            <h3>Nuevo Cliente</h3>
-            <form onSubmit={handleCreate} className="form-grid">
-              <label>
-                <span>Nombre *</span>
-                <input
-                  name="nombre"
-                  value={form.nombre}
-                  onChange={onChange}
-                  required
-                />
+        <div
+          className="m-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowModal(false)}
+        >
+          <div className="m-panel" onClick={(e) => e.stopPropagation()}>
+            <header className="m-head">
+              <div className="m-head__left">
+                <span className="m-head__icon">🧾</span>
+                <h3>Agregar nuevo cliente</h3>
+              </div>
+              <button
+                className="m-close"
+                aria-label="Cerrar"
+                onClick={() => setShowModal(false)}
+              >
+                ×
+              </button>
+            </header>
+
+            <form onSubmit={handleCreate} className="m-form">
+              <label className="field full">
+                <span className="field__label">Nombre *</span>
+                <div className="field__control">
+                  <input
+                    name="nombre"
+                    value={form.nombre}
+                    onChange={onChange}
+                    required
+                    placeholder="Ej: Farmacia La Fe"
+                  />
+                </div>
               </label>
 
-              <label>
-                <span>Correo</span>
-                <input
-                  name="correo"
-                  type="email"
-                  value={form.correo}
-                  onChange={onChange}
-                />
+              <label className="field half">
+                <span className="field__label">Correo</span>
+                <div className="field__control">
+                  <input
+                    name="correo"
+                    type="email"
+                    value={form.correo}
+                    onChange={onChange}
+                    placeholder="correo@ejemplo.com"
+                  />
+                </div>
               </label>
 
-              <label>
-                <span>Teléfono</span>
-                <input
-                  name="telefono"
-                  value={form.telefono}
-                  onChange={onChange}
-                />
+              <label className="field half">
+                <span className="field__label">Teléfono</span>
+                <div className="field__control">
+                  <input
+                    name="telefono"
+                    value={form.telefono}
+                    onChange={onChange}
+                    placeholder="5555-0000"
+                  />
+                </div>
               </label>
 
-              <label>
-                <span>NIT / Empresa</span>
-                <input name="nit" value={form.nit} onChange={onChange} />
+              <label className="field full">
+                <span className="field__label">Dirección</span>
+                <div className="field__control">
+                  <input
+                    name="direccion_linea1"
+                    value={form.direccion_linea1 || ""}
+                    onChange={onChange}
+                    placeholder="Calle y número"
+                  />
+                </div>
               </label>
 
-              <label>
-                <span>Ciudad</span>
-                <input name="ciudad" value={form.ciudad} onChange={onChange} />
+              <label className="field full">
+                <span className="field__label">Dirección (opcional)</span>
+                <div className="field__control">
+                  <input
+                    name="direccion_linea2"
+                    value={form.direccion_linea2 || ""}
+                    onChange={onChange}
+                    placeholder="Colonia, referencia, etc."
+                  />
+                </div>
               </label>
 
-              <label>
-                <span>Departamento</span>
-                <input
-                  name="departamento"
-                  value={form.departamento}
-                  onChange={onChange}
-                />
+              <label className="field half">
+                <span className="field__label">Ciudad</span>
+                <div className="field__control">
+                  <input
+                    name="ciudad"
+                    value={form.ciudad}
+                    onChange={onChange}
+                    placeholder="Ej: Chiquimula"
+                  />
+                </div>
               </label>
 
-              <label className="full">
-                <span>Notas</span>
-                <textarea
-                  name="notas"
-                  rows={3}
-                  value={form.notas}
-                  onChange={onChange}
-                />
+              <label className="field half">
+                <span className="field__label">Departamento</span>
+                <div className="field__control">
+                  <input
+                    name="departamento"
+                    value={form.departamento}
+                    onChange={onChange}
+                    placeholder="Ej: Guatemala"
+                  />
+                </div>
               </label>
 
-              <div className="modal__actions">
+              <label className="field half">
+                <span className="field__label">NIT / Empresa</span>
+                <div className="field__control">
+                  <input
+                    name="nit"
+                    value={form.nit}
+                    onChange={onChange}
+                    placeholder="NIT o nombre de empresa"
+                  />
+                </div>
+              </label>
+
+              <label className="field half">
+                <span className="field__label">Estado</span>
+                <div className="field__control">
+                  <select name="estado" value={form.estado} onChange={onChange}>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                </div>
+              </label>
+
+              <label className="field full">
+                <span className="field__label">Observaciones</span>
+                <div className="field__control">
+                  <textarea
+                    name="notas"
+                    rows={4}
+                    value={form.notas}
+                    onChange={onChange}
+                    placeholder="Notas u observaciones del cliente"
+                  />
+                </div>
+              </label>
+
+              <div className="m-actions full">
                 <button
                   type="button"
                   className="btn-light"
@@ -288,7 +371,7 @@ export default function ClientesPage() {
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Guardando…" : "Guardar"}
+                  {saving ? "Guardando…" : "Guardar cliente"}
                 </button>
               </div>
             </form>
@@ -298,4 +381,3 @@ export default function ClientesPage() {
     </div>
   );
 }
-
