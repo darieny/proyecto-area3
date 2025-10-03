@@ -2,47 +2,64 @@
   padding: 20px;
 }
 
-/* === KPIs === */
-.kpis {
-  display: flex;
-  gap: 20px;
+/* ===== KPIs ===== */
+.clientes__kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
   margin-bottom: 20px;
 }
 
 .kpi {
-  flex: 1;
-  background: #f9f9f9;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 16px;
 }
 
-.kpi h3 {
-  font-size: 14px;
-  color: #666;
-}
-
-.kpi p {
+.kpi__icon {
   font-size: 28px;
-  margin: 5px 0;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: #f0fdf4;
+  border-radius: 12px;
 }
 
-.kpi .up {
-  color: green;
+.kpi__label {
+  font-size: 13px;
+  color: #777;
+}
+
+.kpi__value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.kpi__trend {
   font-size: 12px;
+  margin-top: 4px;
 }
 
-.kpi .down {
-  color: red;
-  font-size: 12px;
+.kpi__trend.up {
+  color: #16a34a;
 }
 
-/* === Tarjeta tabla === */
+.kpi__trend.down {
+  color: #dc2626;
+}
+
+/* ===== Card tabla ===== */
 .clientes__card {
   background: #fff;
-  border-radius: 12px;
-  padding: 20px;
   border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 20px;
 }
 
 .clientes__header {
@@ -54,11 +71,10 @@
 
 .clientes__actions {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  gap: 10px;
 }
 
-/* === buscador === */
+/* ===== buscador ===== */
 .input-search {
   position: relative;
   background: #f7f7f7;
@@ -79,7 +95,7 @@
   font-size: 14px;
 }
 
-/* === dropdown === */
+/* ===== dropdown ===== */
 .dropdown {
   position: relative;
 }
@@ -101,9 +117,8 @@
   background: #fff;
   border: 1px solid #eee;
   border-radius: 10px;
-  min-width: 180px;
+  min-width: 160px;
   padding: 6px 0;
-  z-index: 5;
 }
 
 .dropdown:hover .dropdown__menu {
@@ -124,7 +139,7 @@
   background: #f7f7f7;
 }
 
-/* === tabla === */
+/* ===== tabla ===== */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -134,7 +149,6 @@
 .table td {
   padding: 12px;
   border-bottom: 1px solid #eee;
-  text-align: left;
   font-size: 14px;
 }
 
@@ -149,29 +163,25 @@
   color: #888;
 }
 
-/* === estado pill === */
-.estado,
+/* ===== estado chip ===== */
 .pill {
-  padding: 4px 8px;
-  border-radius: 8px;
   font-size: 12px;
-  text-transform: capitalize;
+  padding: 4px 10px;
+  border-radius: 999px;
   display: inline-block;
 }
 
-.estado.activo,
 .pill.ok {
   background: #d1fae5;
   color: #065f46;
 }
 
-.estado.inactivo,
 .pill.bad {
   background: #fee2e2;
   color: #991b1b;
 }
 
-/* === paginación === */
+/* ===== paginación ===== */
 .pager {
   display: flex;
   gap: 6px;
@@ -203,6 +213,37 @@
 .pager .ellipsis {
   padding: 0 6px;
   color: #999;
-  font-size: 14px;
 }
+
+/* Teléfonos (menos de 768px) */
+@media (max-width: 768px) {
+  .clientes__kpis {
+    grid-template-columns: 1fr; /* 1 por fila */
+  }
+
+  .clientes__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .clientes__actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .input-search {
+    width: 100%;
+  }
+
+  .btn-filter {
+    width: 100%;
+  }
+
+  .pager {
+    justify-content: center; /* centrado en móvil */
+    flex-wrap: wrap;
+  }
+}
+
 

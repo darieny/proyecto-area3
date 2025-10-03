@@ -12,9 +12,16 @@ export default function ClienteKpis({ kpis }) {
 function KpiCard({ title, value, trend, trendType }) {
   return (
     <div className="kpi">
-      <div className="kpi__label">{title}</div>
-      <div className="kpi__value">{value}</div>
-      {trend && <div className={`kpi__trend ${trendType === 'down' ? 'down' : 'up'}`}>{trend}</div>}
+      <div className="kpi__icon">👥</div>
+      <div>
+        <div className="kpi__label">{title}</div>
+        <div className="kpi__value">{value}</div>
+        {trend && (
+          <div className={`kpi__trend ${trendType === 'down' ? 'down' : 'up'}`}>
+            {trend}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
