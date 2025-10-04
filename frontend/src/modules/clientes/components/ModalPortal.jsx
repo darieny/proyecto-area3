@@ -5,11 +5,12 @@ export default function ModalPortal({ open, onClose, children }) {
   
   // Bloquear scroll de fondo mientras está abierto
   useEffect(() => {
-    if (!open) return null;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
+  if (!open) return null;
+  const prev = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+  return () => { document.body.style.overflow = prev; };
+}, [open]);
+
 
   const handleOverlayClick = (e) => {
     // cierra solo si clic fuera del panel
