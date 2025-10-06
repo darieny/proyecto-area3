@@ -11,6 +11,7 @@ import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-m
 
 const PAGE_SIZE = 10;
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Ciudad de Guatemala
+const LIBRARIES = ["places"];
 
 export default function ClientesPage() {
   const [collapsed, setCollapsed] = useState(false);
@@ -34,7 +35,7 @@ export default function ClientesPage() {
   // Carga única de Google Maps (con Places)
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
-    libraries: ["places"],
+    libraries: LIBRARIES,
   });
 
   // Ref de Autocomplete (Places)
