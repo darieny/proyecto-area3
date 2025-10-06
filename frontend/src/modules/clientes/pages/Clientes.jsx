@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { useClientes } from "../hooks/useClientes.js";
@@ -7,10 +7,14 @@ import ClientesTable from "../components/ClientesTable";
 import { api } from "../../../services/http.js";
 import ModalPortal from "../../clientes/components/ModalPortal.jsx";
 import "../css/Clientes.css";
-import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
+
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import { PlaceAutocompleteElement } from "@googlemaps/extended-component-library";
 
 const PAGE_SIZE = 10;
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Ciudad de Guatemala
+
+// evita recargar el loader
 const LIBRARIES = ["places"];
 
 export default function ClientesPage() {
@@ -21,7 +25,6 @@ export default function ClientesPage() {
   const [order, setOrder] = useState("recientes");
   const [page, setPage] = useState(1);
 
-  // para refetch tras crear
   const [refreshTick, setRefreshTick] = useState(0);
 
   const { kpis, items, meta, loading, err } = useClientes({
@@ -31,15 +34,6 @@ export default function ClientesPage() {
   // ======= Modal: estado y handlers =======
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // Carga única de Google Maps (con Places)
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
-    libraries: LIBRARIES,
-  });
-
-  // Ref de Autocomplete (Places)
-  const [placesRef, setPlacesRef] = useState(null);
 
   const [form, setForm] = useState({
     nombre: "",
@@ -97,21 +91,20 @@ export default function ClientesPage() {
 
       // 1) Crear cliente
       const { data: nuevo } = await api.post("/clientes", {
-      nombre: form.nombre.trim(),
-      correo: form.correo || null,
-      telefono: form.telefono || null,
-      nit: form.nit || null,
-      ciudad: form.ciudad || null,
-      departamento: form.departamento || null,
-      notas: form.notas || null,
-      estado: form.estado || "activo",
-      direccion_linea1: form.direccion_linea1 || null,
-      direccion_linea2: form.direccion_linea2 || null,
-    });
+        nombre: form.nombre.trim(),
+        correo: form.correo || null,
+        telefono: form.telefono || null,
+        nit: form.nit || null,
+        ciudad: form.ciudad || null,
+        departamento: form.departamento || null,
+        notas: form.notas || null,
+        estado: form.estado || "activo",
+        direccion_linea1: form.direccion_linea1 || null,
+        direccion_linea2: form.direccion_linea2 || null,
+      });
 
-
-      // 2) Crear ubicación principal si el usuario seleccionó coordenadas
-      if (nuevo?.id && (form.latitud != null && form.longitud != null)) {
+      // 2) Crear ubicación principal (si hay coords)
+      if (nuevo?.id && form.latitud != null && form.longitud != null) {
         await api.post("/ubicaciones", {
           cliente_id: nuevo.id,
           etiqueta: form.ubi_etiqueta || "Principal",
@@ -127,7 +120,6 @@ export default function ClientesPage() {
         });
       }
 
-      // 3) Refrescar tabla
       setShowModal(false);
       setPage(1);
       setRefreshTick((t) => t + 1);
@@ -138,6 +130,21 @@ export default function ClientesPage() {
       setSaving(false);
     }
   }
+
+  // ====== Google Maps Loader (una sola vez) ======
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
+    libraries: LIBRARIES,
+  });
+
+  // Evita recrear el center objeto (render suave)
+  const mapCenter = useMemo(
+    () => ({
+      lat: form.latitud ?? DEFAULT_CENTER.lat,
+      lng: form.longitud ?? DEFAULT_CENTER.lng,
+    }),
+    [form.latitud, form.longitud]
+  );
 
   return (
     <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
@@ -178,8 +185,10 @@ export default function ClientesPage() {
                       <button className="btn-filter">
                         Filtrar por:{" "}
                         <strong>
-                          {order === "recientes" ? "Recientes"
-                            : order === "nombre_asc" ? "Nombre (A–Z)"
+                          {order === "recientes"
+                            ? "Recientes"
+                            : order === "nombre_asc"
+                            ? "Nombre (A–Z)"
                             : "Nombre (Z–A)"}
                         </strong>{" "}
                         ▾
@@ -232,13 +241,6 @@ export default function ClientesPage() {
 
       {/* ===== Modal (en portal) ===== */}
       <ModalPortal open={showModal} onClose={() => setShowModal(false)}>
-        {/* Loader / error del script de Maps */}
-        {!isLoaded ? (
-          <div style={{ padding: 20 }}>Loading…</div>
-        ) : loadError ? (
-          <div style={{ padding: 20, color: "red" }}>Error cargando Google Maps</div>
-        ) : (
-          <>
             <header className="m-head">
               <div className="m-head__left">
                 <span className="m-head__icon">🧾</span>
@@ -321,79 +323,72 @@ export default function ClientesPage() {
                 </div>
               </label>
 
-          {/* ====== Autocomplete + Mapa ====== */}
-              <label className="field full">
-                <span className="field__label">Buscar y seleccionar en el mapa</span>
-                <div className="field__control">
-                  <Autocomplete
-                    onLoad={(ref) => setPlacesRef(ref)}
-                    onPlaceChanged={() => {
-                      const place = placesRef?.getPlace();
-                      if (!place) return;
-                      const loc = place.geometry?.location;
-                      setForm((f) => ({
-                        ...f,
-                        direccion_linea1: f.direccion_linea1 || place.formatted_address || place.name,
-                        latitud: loc ? loc.lat() : f.latitud,
-                        longitud: loc ? loc.lng() : f.longitud,
-                        place_id: place.place_id || f.place_id,
-                      }));
-                    }}
-                  >
-                    <input
-                      placeholder="Buscar dirección, negocio, etc."
-                      style={{
-                        width: "100%",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        background: "#f8fafc",
-                      }}
-                    />
-                  </Autocomplete>
-                </div>
-              </label>
+          {/* ====== Autocomplete ====== */}
+          <label className="field full">
+            <span className="field__label">Buscar y seleccionar en el mapa</span>
+            <div className="field__control">
+              {isLoaded && (
+                <PlaceAutocompleteElement
+                  // Evita re-montajes
+                  style={{ width: "100%", borderRadius: 10, padding: "4px 0" }}
+                  placeholder="Buscar dirección, negocio, etc."
+                  onPlaceChanged={(e) => {
+                    // e.detail contiene el PlaceResult
+                    const place = e?.detail;
+                    const loc = place?.geometry?.location;
+                    setForm((f) => ({
+                      ...f,
+                      direccion_linea1: f.direccion_linea1 || place?.formatted_address || place?.name || "",
+                      latitud: loc ? loc.lat() : f.latitud,
+                      longitud: loc ? loc.lng() : f.longitud,
+                      place_id: place?.place_id || f.place_id,
+                    }));
+                  }}
+                />
+              )}
+            </div>
+          </label>
 
-              <label className="field full">
-                <span className="field__label">Ubicación del cliente</span>
-                <div style={{ height: 260, borderRadius: 10, overflow: "hidden" }}>
-                  <GoogleMap
-                    mapContainerStyle={{ width: "100%", height: "100%" }}
-                    center={{
-                      lat: form.latitud ?? DEFAULT_CENTER.lat,
-                      lng: form.longitud ?? DEFAULT_CENTER.lng,
-                    }}
-                    zoom={form.latitud ? 16 : 12}
-                    options={{ streetViewControl: false, mapTypeControl: false }}
-                    onClick={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        latitud: e.latLng.lat(),
-                        longitud: e.latLng.lng(),
-                      }))
-                    }
-                  >
-                    {form.latitud && form.longitud && (
-                      <Marker
-                        position={{ lat: form.latitud, lng: form.longitud }}
-                        draggable
-                        onDragEnd={(e) =>
-                          setForm((f) => ({
-                            ...f,
-                            latitud: e.latLng.lat(),
-                            longitud: e.latLng.lng(),
-                          }))
-                        }
-                      />
-                    )}
-                  </GoogleMap>
-                </div>
-                {form.latitud != null && form.longitud != null && (
-                  <small style={{ color: "#475569" }}>
-                    Coordenadas: {form.latitud.toFixed(6)}, {form.longitud.toFixed(6)}
-                  </small>
-                )}
-              </label>
+          {/* ====== Mapa ====== */}
+          <label className="field full">
+            <span className="field__label">Ubicación del cliente</span>
+            <div style={{ height: 260, borderRadius: 10, overflow: "hidden" }}>
+              {isLoaded && (
+                <GoogleMap
+                  mapContainerStyle={{ width: "100%", height: "100%" }}
+                  center={mapCenter}
+                  zoom={form.latitud ? 16 : 12}
+                  options={{ streetViewControl: false, mapTypeControl: false }}
+                  onClick={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      latitud: e.latLng.lat(),
+                      longitud: e.latLng.lng(),
+                    }))
+                  }
+                >
+                  {form.latitud != null && form.longitud != null && (
+                    <Marker
+                      position={{ lat: form.latitud, lng: form.longitud }}
+                      draggable
+                      onDragEnd={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          latitud: e.latLng.lat(),
+                          longitud: e.latLng.lng(),
+                        }))
+                      }
+                    />
+                  )}
+                </GoogleMap>
+              )}
+            </div>
+            {form.latitud != null && form.longitud != null && (
+              <small style={{ color: "#475569" }}>
+                Coordenadas: {form.latitud.toFixed(6)}, {form.longitud.toFixed(6)}
+              </small>
+            )}
+          </label>
 
               {/* Meta de ubicación */}
               <label className="field half">
@@ -434,16 +429,14 @@ export default function ClientesPage() {
               </label>
 
               <div className="m-actions full">
-                <button type="button" className="btn-light" onClick={() => setShowModal(false)} disabled={saving}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Guardando…" : "Guardar cliente"}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
+            <button type="button" className="btn-light" onClick={() => setShowModal(false)} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar cliente"}
+            </button>
+          </div>
+        </form>
       </ModalPortal>
     </div>
   );
