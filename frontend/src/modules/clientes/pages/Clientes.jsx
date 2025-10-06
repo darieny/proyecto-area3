@@ -89,20 +89,19 @@ export default function ClientesPage() {
       setSaving(true);
 
       // 1) Crear cliente
-      await api.post("/clientes", {
-        nombre: form.nombre.trim(),
-        correo: form.correo || null,
-        telefono: form.telefono || null,
-        nit: form.nit || null,
-        ciudad: form.ciudad || null,
-        departamento: form.departamento || null,
-        notas: form.notas || null,
-        estado: form.estado || "activo",
-        direccion_linea1: form.direccion_linea1 || null,   
-        direccion_linea2: form.direccion_linea2 || null,   
-      });
+      const { data: nuevo } = await api.post("/clientes", {
+      nombre: form.nombre.trim(),
+      correo: form.correo || null,
+      telefono: form.telefono || null,
+      nit: form.nit || null,
+      ciudad: form.ciudad || null,
+      departamento: form.departamento || null,
+      notas: form.notas || null,
+      estado: form.estado || "activo",
+      direccion_linea1: form.direccion_linea1 || null,
+      direccion_linea2: form.direccion_linea2 || null,
+    });
 
-      const nuevo = resp.data;
 
       // 2) Crear ubicación principal si el usuario seleccionó coordenadas
       if (nuevo?.id && (form.latitud != null && form.longitud != null)) {
@@ -121,6 +120,7 @@ export default function ClientesPage() {
         });
       }
 
+      // 3) Refrescar tabla
       setShowModal(false);
       setPage(1);
       setRefreshTick((t) => t + 1);
