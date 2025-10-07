@@ -189,6 +189,65 @@
   to{ opacity:1; transform:translateY(0); }
 }
 
+/* ===== Detalle de cliente ===== */
+.cliente { padding: 20px; }
+
+.cliente__card{
+  background:#fff; border:1px solid #eee; border-radius:16px; padding:20px;
+}
+
+.cliente__header{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+  margin-bottom:14px;
+}
+.cliente__title{ margin:0 0 6px 0; }
+.cliente__meta{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{
+  font-size:12px; padding:4px 10px; border-radius:999px;
+  background:#f3f4f6; color:#334155; border:1px solid #e5e7eb;
+}
+.cliente__actions{ display:flex; gap:8px; }
+
+.cliente__grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px;
+}
+.dato{ background:#fafafa; border:1px solid #f0f0f0; border-radius:12px; padding:12px; }
+.dato__label{ font-size:12px; color:#64748b; margin-bottom:6px; }
+.dato__value{ font-size:14px; color:#0f172a; word-break:break-word; }
+
+.cliente__section{
+  grid-column:1 / -1;
+}
+.box{
+  border:1px solid #e5e7eb; background:#fff; border-radius:10px; padding:10px 12px;
+  min-height:44px;
+}
+
+/* ===== Formulario en detalle (edición inline) ===== */
+.d-form{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;
+}
+.d-form h3{ grid-column:1 / -1; margin:0 0 6px 0; }
+.d-form label{ display:flex; flex-direction:column; gap:6px; }
+.d-form input, .d-form select, .d-form textarea{
+  width:100%; border:1px solid #e5e7eb; background:#f8fafc; border-radius:10px;
+  padding:10px 12px; font-size:14px; outline:none;
+}
+.d-form input:focus, .d-form select:focus, .d-form textarea:focus{
+  border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,.15); background:#fff;
+}
+.d-form .col-span{ grid-column:1 / -1; }
+.d-actions{ grid-column:1 / -1; display:flex; justify-content:flex-end; gap:10px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px){
+  .cliente__grid{ grid-template-columns:1fr; }
+  .d-form{ grid-template-columns:1fr; }
+  .cliente__header{ flex-direction:column; align-items:flex-start; }
+  .cliente__actions{ width:100%; }
+}
+
+
 
 
 

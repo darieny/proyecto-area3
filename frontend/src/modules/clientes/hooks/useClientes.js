@@ -1,25 +1,34 @@
-import { useEffect, useState } from 'react';
-import { api } from '../../../services/http.js';
+import { useEffect, useState, useCallback } from "react";
+import { api } from "../../../services/http.js";
 
-  export function useClientes({ search = '', order = 'recientes', page = 1, pageSize = 10, departamento, estado }) {
+export function useClientes({
+  search = "",
+  order = "recientes",
+  page = 1,
+  pageSize = 10,
+  departamento,
+  estado,
+  refreshTick = 0,       
+} = {}) {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize, totalPages: 1 });
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState("");
 
+  // ===== list + summary =====
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         setLoading(true);
         const [s, l] = await Promise.all([
-          api.get('/clientes/admin/summary'),
-          api.get('/clientes', {
+          api.get("/clientes/admin/summary"),
+          api.get("/clientes", {
             params: {
               search: search || undefined,
               departamento: departamento || undefined,
-              estado: estado || undefined, // 'activo' | 'inactivo'
+              estado: estado || undefined,
               order,
               page,
               pageSize,
@@ -27,17 +36,30 @@ import { api } from '../../../services/http.js';
           }),
         ]);
         if (!alive) return;
-        setKpis(s.data);                       // { total, nuevos_mes, sin_visitas }
-        setItems(l.data?.data ?? []);          // lista
-        setMeta(l.data?.meta ?? meta);         // { total, page, pageSize, totalPages }
+        setKpis(s.data);
+        setItems(l.data?.data ?? []);
+        setMeta(l.data?.meta ?? meta);
       } catch (e) {
-        if (alive) setErr('No se pudo cargar clientes');
+        if (alive) setErr("No se pudo cargar clientes");
       } finally {
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
-  }, [search, order, page, pageSize, departamento, estado]);
+  }, [search, order, page, pageSize, departamento, estado, refreshTick]);
 
-  return { kpis, items, meta, loading, err };
+  // ===== get by id =====
+  const getCliente = useCallback(async (id) => {
+    const { data } = await api.get(`/clientes/${id}`);
+    return data;
+  }, []);
+
+  // ===== update =====
+  const updateCliente = useCallback(async (id, payload) => {
+    const { data } = await api.put(`/clientes/${id}`, payload);
+    return data; 
+  }, []);
+
+  return { kpis, items, meta, loading, err, getCliente, updateCliente };
 }
+
