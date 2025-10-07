@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { useClientes } from "../hooks/useClientes.js";
@@ -8,13 +8,10 @@ import { api } from "../../../services/http.js";
 import ModalPortal from "../../clientes/components/ModalPortal.jsx";
 import "../css/Clientes.css";
 
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
-import '@googlemaps/extended-component-library/places';
+import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 
 const PAGE_SIZE = 10;
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Ciudad de Guatemala
-
-// evita recargar el loader
 const LIBRARIES = ["places"];
 
 export default function ClientesPage() {
@@ -24,7 +21,6 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [order, setOrder] = useState("recientes");
   const [page, setPage] = useState(1);
-
   const [refreshTick, setRefreshTick] = useState(0);
 
   const { kpis, items, meta, loading, err } = useClientes({
@@ -46,7 +42,6 @@ export default function ClientesPage() {
     estado: "activo",
     direccion_linea1: "",
     direccion_linea2: "",
-
     // Ubicación principal
     ubi_etiqueta: "Principal",
     ubi_cp: "",
@@ -86,6 +81,7 @@ export default function ClientesPage() {
   async function handleCreate(e) {
     e.preventDefault();
     if (!form.nombre.trim()) return;
+
     try {
       setSaving(true);
 
@@ -131,13 +127,16 @@ export default function ClientesPage() {
     }
   }
 
-  // ====== Google Maps Loader (una sola vez) ======
+  // ====== Google Maps Loader ======
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
     libraries: LIBRARIES,
   });
 
-  // Evita recrear el center objeto (render suave)
+  // Ref para Autocomplete (Places)
+  const acRef = useRef(null);
+
+  // Centro memorizado
   const mapCenter = useMemo(
     () => ({
       lat: form.latitud ?? DEFAULT_CENTER.lat,
@@ -241,100 +240,98 @@ export default function ClientesPage() {
 
       {/* ===== Modal (en portal) ===== */}
       <ModalPortal open={showModal} onClose={() => setShowModal(false)}>
-            <header className="m-head">
-              <div className="m-head__left">
-                <span className="m-head__icon">🧾</span>
-                <h3>Agregar nuevo cliente</h3>
-              </div>
-              <button className="m-close" aria-label="Cerrar" onClick={() => setShowModal(false)}>×</button>
-            </header>
+        <header className="m-head">
+          <div className="m-head__left">
+            <span className="m-head__icon">🧾</span>
+            <h3>Agregar nuevo cliente</h3>
+          </div>
+          <button className="m-close" aria-label="Cerrar" onClick={() => setShowModal(false)}>×</button>
+        </header>
 
-            <form onSubmit={handleCreate} className="m-form">
-              <label className="field full">
-                <span className="field__label">Nombre *</span>
-                <div className="field__control">
-                  <input name="nombre" value={form.nombre} onChange={onChange} required placeholder="Ej: Farmacia La Fe" />
-                </div>
-              </label>
+        <form onSubmit={handleCreate} className="m-form">
+          {/* Campos del cliente */}
+          <label className="field full">
+            <span className="field__label">Nombre *</span>
+            <div className="field__control">
+              <input name="nombre" value={form.nombre} onChange={onChange} required placeholder="Ej: Farmacia La Fe" />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">Correo</span>
-                <div className="field__control">
-                  <input name="correo" type="email" value={form.correo} onChange={onChange} placeholder="correo@ejemplo.com" />
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">Correo</span>
+            <div className="field__control">
+              <input name="correo" type="email" value={form.correo} onChange={onChange} placeholder="correo@ejemplo.com" />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">Teléfono</span>
-                <div className="field__control">
-                  <input name="telefono" value={form.telefono} onChange={onChange} placeholder="5555-0000" />
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">Teléfono</span>
+            <div className="field__control">
+              <input name="telefono" value={form.telefono} onChange={onChange} placeholder="5555-0000" />
+            </div>
+          </label>
 
-              <label className="field full">
-                <span className="field__label">Dirección</span>
-                <div className="field__control">
-                  <input name="direccion_linea1" value={form.direccion_linea1} onChange={onChange} placeholder="Calle y número" />
-                </div>
-              </label>
+          <label className="field full">
+            <span className="field__label">Dirección</span>
+            <div className="field__control">
+              <input name="direccion_linea1" value={form.direccion_linea1} onChange={onChange} placeholder="Calle y número" />
+            </div>
+          </label>
 
-              <label className="field full">
-                <span className="field__label">Dirección (opcional)</span>
-                <div className="field__control">
-                  <input name="direccion_linea2" value={form.direccion_linea2} onChange={onChange} placeholder="Colonia, referencia, etc." />
-                </div>
-              </label>
+          <label className="field full">
+            <span className="field__label">Dirección (opcional)</span>
+            <div className="field__control">
+              <input name="direccion_linea2" value={form.direccion_linea2} onChange={onChange} placeholder="Colonia, referencia, etc." />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">Ciudad</span>
-                <div className="field__control">
-                  <input name="ciudad" value={form.ciudad} onChange={onChange} placeholder="Ej: Chiquimula" />
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">Ciudad</span>
+            <div className="field__control">
+              <input name="ciudad" value={form.ciudad} onChange={onChange} placeholder="Ej: Chiquimula" />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">Departamento</span>
-                <div className="field__control">
-                  <input name="departamento" value={form.departamento} onChange={onChange} placeholder="Ej: Guatemala" />
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">Departamento</span>
+            <div className="field__control">
+              <input name="departamento" value={form.departamento} onChange={onChange} placeholder="Ej: Guatemala" />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">NIT / Empresa</span>
-                <div className="field__control">
-                  <input name="nit" value={form.nit} onChange={onChange} placeholder="NIT o nombre de empresa" />
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">NIT / Empresa</span>
+            <div className="field__control">
+              <input name="nit" value={form.nit} onChange={onChange} placeholder="NIT o nombre de empresa" />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">Estado</span>
-                <div className="field__control">
-                  <select name="estado" value={form.estado} onChange={onChange}>
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                  </select>
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">Estado</span>
+            <div className="field__control">
+              <select name="estado" value={form.estado} onChange={onChange}>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+          </label>
 
-              <label className="field full">
-                <span className="field__label">Observaciones</span>
-                <div className="field__control">
-                  <textarea name="notas" rows={4} value={form.notas} onChange={onChange} placeholder="Notas u observaciones del cliente" />
-                </div>
-              </label>
+          <label className="field full">
+            <span className="field__label">Observaciones</span>
+            <div className="field__control">
+              <textarea name="notas" rows={4} value={form.notas} onChange={onChange} placeholder="Notas u observaciones del cliente" />
+            </div>
+          </label>
 
-          {/* ====== Autocomplete ====== */}
+          {/* ====== Autocomplete (Places) ====== */}
           <label className="field full">
             <span className="field__label">Buscar y seleccionar en el mapa</span>
             <div className="field__control">
               {isLoaded && (
-                <PlaceAutocompleteElement
-                  // Evita re-montajes
-                  style={{ width: "100%", borderRadius: 10, padding: "4px 0" }}
-                  placeholder="Buscar dirección, negocio, etc."
-                  onPlaceChanged={(e) => {
-                    // e.detail contiene el PlaceResult
-                    const place = e?.detail;
+                <Autocomplete
+                  onLoad={(ref) => (acRef.current = ref)}
+                  onPlaceChanged={() => {
+                    const place = acRef.current?.getPlace();
                     const loc = place?.geometry?.location;
                     setForm((f) => ({
                       ...f,
@@ -344,7 +341,18 @@ export default function ClientesPage() {
                       place_id: place?.place_id || f.place_id,
                     }));
                   }}
-                />
+                >
+                  <input
+                    placeholder="Buscar dirección, negocio, etc."
+                    style={{
+                      width: "100%",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      background: "#f8fafc",
+                    }}
+                  />
+                </Autocomplete>
               )}
             </div>
           </label>
@@ -390,45 +398,40 @@ export default function ClientesPage() {
             )}
           </label>
 
-              {/* Meta de ubicación */}
-              <label className="field half">
-                <span className="field__label">Etiqueta de ubicación</span>
-                <div className="field__control">
-                  <input
-                    name="ubi_etiqueta"
-                    value={form.ubi_etiqueta}
-                    onChange={onChange}
-                    placeholder="Principal / Sucursal / Bodega"
-                  />
-                </div>
-              </label>
+          {/* Meta de ubicación */}
+          <label className="field half">
+            <span className="field__label">Etiqueta de ubicación</span>
+            <div className="field__control">
+              <input
+                name="ubi_etiqueta"
+                value={form.ubi_etiqueta}
+                onChange={onChange}
+                placeholder="Principal / Sucursal / Bodega"
+              />
+            </div>
+          </label>
 
-              <label className="field half">
-                <span className="field__label">Código Postal</span>
-                <div className="field__control">
-                  <input
-                    name="ubi_cp"
-                    value={form.ubi_cp}
-                    onChange={onChange}
-                    placeholder="Opcional"
-                  />
-                </div>
-              </label>
+          <label className="field half">
+            <span className="field__label">Código Postal</span>
+            <div className="field__control">
+              <input name="ubi_cp" value={form.ubi_cp} onChange={onChange} placeholder="Opcional" />
+            </div>
+          </label>
 
-              <label className="field full">
-                <span className="field__label">Notas de ubicación</span>
-                <div className="field__control">
-                  <textarea
-                    name="ubi_notas"
-                    rows={2}
-                    value={form.ubi_notas}
-                    onChange={onChange}
-                    placeholder="Indicaciones de acceso, referencias, etc."
-                  />
-                </div>
-              </label>
+          <label className="field full">
+            <span className="field__label">Notas de ubicación</span>
+            <div className="field__control">
+              <textarea
+                name="ubi_notas"
+                rows={2}
+                value={form.ubi_notas}
+                onChange={onChange}
+                placeholder="Indicaciones de acceso, referencias, etc."
+              />
+            </div>
+          </label>
 
-              <div className="m-actions full">
+          <div className="m-actions full">
             <button type="button" className="btn-light" onClick={() => setShowModal(false)} disabled={saving}>
               Cancelar
             </button>
@@ -441,4 +444,5 @@ export default function ClientesPage() {
     </div>
   );
 }
+
 
