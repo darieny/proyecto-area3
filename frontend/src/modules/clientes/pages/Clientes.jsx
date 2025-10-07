@@ -9,7 +9,7 @@ import ModalPortal from "../../clientes/components/ModalPortal.jsx";
 import "../css/Clientes.css";
 
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
-import { PlaceAutocompleteElement } from "@googlemaps/extended-component-library";
+import '@googlemaps/extended-component-library/places';
 
 const PAGE_SIZE = 10;
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Ciudad de Guatemala
