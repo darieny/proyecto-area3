@@ -9,7 +9,7 @@ r.use(requireAuth, requireRole(['admin']));
 // crear ubicación
 r.post('/', createUbicacion);
 
-// listar ubicaciones por cliente
+// listar ubicaciones por clientes
 r.get('/by-cliente/:clienteId', listUbicacionesByCliente);
 
 export default r;
