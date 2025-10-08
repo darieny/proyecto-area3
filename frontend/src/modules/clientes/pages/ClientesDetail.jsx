@@ -7,6 +7,7 @@ import "../css/Clientes.css";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Guatemala
+const LIBRARIES = ["places"];
 
 export default function ClienteDetail() {
   const { id } = useParams();
@@ -108,12 +109,10 @@ export default function ClienteDetail() {
   // Google Maps loader (solo para ver el punto)
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
+    libraries: LIBRARIES,
   });
 
-  const center = useMemo(() => {
-    if (coords) return coords;
-    return DEFAULT_CENTER;
-  }, [coords]);
+  const center = useMemo(() => (coords ? coords : DEFAULT_CENTER), [coords]);
 
   if (!cliente) {
     return (
