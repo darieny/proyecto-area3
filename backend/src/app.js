@@ -8,6 +8,7 @@ import rolesRoutes from './routes/roles.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import clientesRoutes from './routes/clientes.routes.js';
 import ubicacionesRoutes from './routes/ubicaciones.routes.js';
+import visitasRoutes from './routes/visitas.routes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/roles', rolesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/ubicaciones', ubicacionesRoutes);
+app.use('/api/visitas', visitasRoutes);
 
 export default app;
 

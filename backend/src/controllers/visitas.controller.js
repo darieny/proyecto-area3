@@ -1,0 +1,383 @@
+import { query } from '../config/db.js';
+
+/** =========================
+ *   LEAN (sin servicios)
+ * ========================= */
+function parsePagination({ page = '1', pageSize = '10' }) {
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+  const offset = (p - 1) * ps;
+  return { page: p, pageSize: ps, offset, limit: ps };
+}
+
+async function getDefaultStatusId() {
+  const { rows } = await query(`
+    SELECT ci.id
+    FROM catalogo_items ci
+    JOIN catalogo_grupos cg ON cg.id = ci.grupo_id
+    WHERE cg.codigo = 'VISITA_STATUS' AND ci.por_defecto = TRUE
+    LIMIT 1;
+  `);
+  if (!rows[0]) throw new Error('No hay status por defecto en VISITA_STATUS');
+  return rows[0].id;
+}
+
+async function ensureUbicacionPerteneceACliente(ubicacion_id, cliente_id) {
+  if (!ubicacion_id) return;
+  const { rows } = await query(
+    `SELECT 1 FROM ubicaciones WHERE id=$1 AND cliente_id=$2`,
+    [ubicacion_id, cliente_id]
+  );
+  if (!rows[0]) throw new Error('ubicacion_id no pertenece al cliente');
+}
+
+function buildSelectNormalizado() {
+  return `
+    v.id, v.cliente_id, c.nombre AS cliente_nombre,
+    v.ubicacion_id, u.etiqueta AS ubicacion_etiqueta, u.ciudad AS ubicacion_ciudad, u.departamento AS ubicacion_departamento,
+    v.titulo, v.descripcion,
+    v.tecnico_asignado_id, tu.nombre_completo AS tecnico_nombre,
+    v.creado_por_id, cu.nombre_completo AS creado_por_nombre,
+    v.status_id, s.etiqueta AS status_etiqueta, s.color AS status_color,
+    v.priority_id, pr.etiqueta AS priority_etiqueta, pr.color AS priority_color,
+    v.type_id, ty.etiqueta AS type_etiqueta,
+    v.programada_inicio, v.programada_fin, v.real_inicio, v.real_fin
+  `;
+}
+
+function orderSqlFrom(order) {
+  switch (order) {
+    case 'programadas_asc': return 'ORDER BY v.programada_inicio ASC NULLS LAST';
+    case 'programadas_desc': return 'ORDER BY v.programada_inicio DESC NULLS LAST';
+    case 'recientes':
+    default: return 'ORDER BY v.id DESC';
+  }
+}
+
+/** =========================
+ * Listar visitas
+ * ========================= */
+export async function list(req, res, next) {
+  try {
+    const { page, pageSize, order } = req.query;
+    const { offset, limit } = parsePagination({ page, pageSize });
+
+    const filters = {
+      q: req.query.q,
+      status_id: req.query.status_id,
+      priority_id: req.query.priority_id,
+      type_id: req.query.type_id,
+      cliente_id: req.query.cliente_id,
+      tecnico_id: req.query.tecnico_id,
+      desde: req.query.desde,
+      hasta: req.query.hasta,
+    };
+
+    const params = [];
+    const where = [];
+    if (filters.q) {
+      params.push(`%${filters.q}%`);
+      where.push(`(v.titulo ILIKE $${params.length} OR v.descripcion ILIKE $${params.length})`);
+    }
+    if (filters.status_id) { params.push(filters.status_id); where.push(`v.status_id = $${params.length}`); }
+    if (filters.priority_id) { params.push(filters.priority_id); where.push(`v.priority_id = $${params.length}`); }
+    if (filters.type_id) { params.push(filters.type_id); where.push(`v.type_id = $${params.length}`); }
+    if (filters.cliente_id) { params.push(filters.cliente_id); where.push(`v.cliente_id = $${params.length}`); }
+    if (filters.tecnico_id) { params.push(filters.tecnico_id); where.push(`v.tecnico_asignado_id = $${params.length}`); }
+    if (filters.desde) { params.push(filters.desde); where.push(`v.programada_inicio >= $${params.length}`); }
+    if (filters.hasta) { params.push(filters.hasta); where.push(`v.programada_inicio < $${params.length}`); }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const orderSql = orderSqlFrom(order);
+
+    const selectNorm = buildSelectNormalizado();
+
+    const { rows } = await query(
+      `
+      SELECT ${selectNorm}
+      FROM visitas v
+      JOIN clientes c ON c.id = v.cliente_id
+      LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+      LEFT JOIN usuarios tu ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s ON s.id = v.status_id
+      LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+      LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+      ${whereSql}
+      ${orderSql}
+      LIMIT $${params.push(limit)} OFFSET $${params.push(offset)}
+      `,
+      params
+    );
+
+    const { rows: countRows } = await query(
+      `SELECT COUNT(*) AS total FROM visitas v ${whereSql}`,
+      params.slice(0, params.length - 2) // mismos filtros sin limit/offset
+    );
+
+    res.json({ items: rows, meta: { total: Number(countRows[0].total), page: Number(page||1), pageSize: Number(pageSize||10) } });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Obtener una visita (detalle)
+ * ========================= */
+export async function getOne(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const selectNorm = buildSelectNormalizado();
+    const { rows } = await query(
+      `
+      SELECT ${selectNorm}
+      FROM visitas v
+      JOIN clientes c ON c.id = v.cliente_id
+      LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+      LEFT JOIN usuarios tu ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s ON s.id = v.status_id
+      LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+      LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+      WHERE v.id = $1
+      `,
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Visita no encontrada' });
+
+    // Contadores básicos
+    const { rows: obs } = await query(`SELECT COUNT(*)::int AS n FROM visita_observaciones WHERE visita_id=$1`, [id]);
+    const { rows: evs } = await query(`SELECT COUNT(*)::int AS n FROM evidencias WHERE visita_id=$1`, [id]);
+
+    res.json({ ...rows[0], observaciones_count: obs[0].n, evidencias_count: evs[0].n });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Crear visita desde un cliente
+ * ========================= */
+export async function createForCliente(req, res, next) {
+  try {
+    const clienteId = Number(req.params.clienteId);
+    const b = req.body || {};
+
+    // Validaciones mínimas
+    if (!b.titulo) return res.status(400).json({ error: 'titulo requerido' });
+    if (!b.creado_por_id) return res.status(400).json({ error: 'creado_por_id requerido' });
+    if (b.programada_inicio && b.programada_fin) {
+      if (new Date(b.programada_fin) <= new Date(b.programada_inicio)) {
+        return res.status(400).json({ error: 'programada_fin debe ser > programada_inicio' });
+      }
+    }
+
+    await ensureUbicacionPerteneceACliente(b.ubicacion_id, clienteId);
+    const statusId = b.status_id || await getDefaultStatusId();
+
+    const { rows } = await query(
+      `INSERT INTO visitas
+        (cliente_id, ubicacion_id, titulo, descripcion, tecnico_asignado_id, creado_por_id,
+         status_id, priority_id, type_id, programada_inicio, programada_fin)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING id`,
+      [
+        clienteId,
+        b.ubicacion_id || null,
+        b.titulo,
+        b.descripcion || null,
+        b.tecnico_asignado_id || null,
+        b.creado_por_id,
+        statusId,
+        b.priority_id || null,
+        b.type_id || null,
+        b.programada_inicio || null,
+        b.programada_fin || null
+      ]
+    );
+
+    res.status(201).json({ id: rows[0].id });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Actualizar (PUT) campos editables
+ * ========================= */
+export async function updateOne(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const b = req.body || {};
+
+    if (b.programada_inicio && b.programada_fin) {
+      if (new Date(b.programada_fin) <= new Date(b.programada_inicio)) {
+        return res.status(400).json({ error: 'programada_fin debe ser > programada_inicio' });
+      }
+    }
+
+    // Si envían cliente_id y ubicacion_id juntos, validar relación
+    if (b.cliente_id && b.ubicacion_id) {
+      await ensureUbicacionPerteneceACliente(b.ubicacion_id, b.cliente_id);
+    }
+
+    const fields = [];
+    const params = [];
+    const push = (v) => (params.push(v), `$${params.length}`);
+
+    if (b.titulo !== undefined) fields.push(`titulo=${push(b.titulo)}`);
+    if (b.descripcion !== undefined) fields.push(`descripcion=${push(b.descripcion)}`);
+    if (b.ubicacion_id !== undefined) fields.push(`ubicacion_id=${push(b.ubicacion_id)}`);
+    if (b.tecnico_asignado_id !== undefined) fields.push(`tecnico_asignado_id=${push(b.tecnico_asignado_id)}`);
+    if (b.priority_id !== undefined) fields.push(`priority_id=${push(b.priority_id)}`);
+    if (b.type_id !== undefined) fields.push(`type_id=${push(b.type_id)}`);
+    if (b.programada_inicio !== undefined) fields.push(`programada_inicio=${push(b.programada_inicio)}`);
+    if (b.programada_fin !== undefined) fields.push(`programada_fin=${push(b.programada_fin)}`);
+
+    if (!fields.length) return res.status(400).json({ error: 'Nada para actualizar' });
+
+    params.push(id);
+    await query(`UPDATE visitas SET ${fields.join(', ')} WHERE id=$${params.length}`, params);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Cambiar estado (PATCH) + logs
+ * ========================= */
+export async function patchEstado(req, res, next) {
+  try {
+    const visitaId = Number(req.params.id);
+    const { estado_nuevo_id, nota, autor_id } = req.body || {};
+    if (!estado_nuevo_id) return res.status(400).json({ error: 'estado_nuevo_id requerido' });
+    if (!autor_id) return res.status(400).json({ error: 'autor_id requerido' });
+
+    const { rows: curr } = await query(`SELECT status_id, real_inicio, real_fin FROM visitas WHERE id=$1`, [visitaId]);
+    if (!curr[0]) return res.status(404).json({ error: 'Visita no encontrada' });
+    const estadoAnteriorId = curr[0].status_id;
+
+    // Obtener códigos (para decidir real_inicio/real_fin)
+    const { rows: estados } = await query(
+      `SELECT id, codigo
+       FROM catalogo_items
+       WHERE id = ANY($1::bigint[])`,
+      [[estadoAnteriorId, estado_nuevo_id]]
+    );
+    const getCodigo = (id) => estados.find(e => e.id === id)?.codigo;
+    const codigoNuevo = getCodigo(estado_nuevo_id);
+
+    const setRealInicio = (codigoNuevo === 'en_progreso');
+    const setRealFin = (codigoNuevo === 'resuelta' || codigoNuevo === 'cancelada');
+
+    await query('BEGIN');
+    try {
+      await query(
+        `UPDATE visitas
+         SET status_id=$1,
+             real_inicio = COALESCE(real_inicio, CASE WHEN $2 THEN NOW() ELSE NULL END),
+             real_fin = CASE WHEN $3 THEN NOW() ELSE real_fin END
+         WHERE id=$4`,
+        [estado_nuevo_id, setRealInicio, setRealFin, visitaId]
+      );
+
+      await query(
+        `INSERT INTO visit_logs (visita_id, autor_id, estado_anterior_id, estado_nuevo_id, nota)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [visitaId, autor_id, estadoAnteriorId, estado_nuevo_id, nota || null]
+      );
+
+      await query('COMMIT');
+    } catch (e) {
+      await query('ROLLBACK');
+      throw e;
+    }
+
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Observaciones
+ * ========================= */
+export async function getObservaciones(req, res, next) {
+  try {
+    const visitaId = Number(req.params.id);
+    const vis = req.query.visibilidad;
+    const params = [visitaId];
+    let whereVis = '';
+    if (vis) { params.push(vis); whereVis = `AND o.visibilidad = $2`; }
+    const { rows } = await query(
+      `SELECT o.id, o.usuario_id, u.nombre_completo AS usuario_nombre,
+              o.contenido, o.visibilidad
+       FROM visita_observaciones o
+       JOIN usuarios u ON u.id = o.usuario_id
+       WHERE o.visita_id=$1 ${whereVis}
+       ORDER BY o.id ASC`,
+      params
+    );
+    res.json({ items: rows });
+  } catch (e) { next(e); }
+}
+
+export async function postObservacion(req, res, next) {
+  try {
+    const visitaId = Number(req.params.id);
+    const { usuario_id, contenido, visibilidad } = req.body || {};
+    if (!usuario_id) return res.status(400).json({ error: 'usuario_id requerido' });
+    if (!contenido) return res.status(400).json({ error: 'contenido requerido' });
+
+    const { rows } = await query(
+      `INSERT INTO visita_observaciones (visita_id, usuario_id, contenido, visibilidad)
+       VALUES ($1,$2,$3,$4) RETURNING id`,
+      [visitaId, usuario_id, contenido, visibilidad || 'interno']
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Evidencias
+ * ========================= */
+export async function getEvidencias(req, res, next) {
+  try {
+    const visitaId = Number(req.params.id);
+    const { rows } = await query(
+      `SELECT id, usuario_id, archivo_url, descripcion
+       FROM evidencias WHERE visita_id=$1 ORDER BY id ASC`,
+      [visitaId]
+    );
+    res.json({ items: rows });
+  } catch (e) { next(e); }
+}
+
+export async function postEvidencia(req, res, next) {
+  try {
+    const visitaId = Number(req.params.id);
+    const { usuario_id, archivo_url, descripcion } = req.body || {};
+    if (!usuario_id) return res.status(400).json({ error: 'usuario_id requerido' });
+    if (!archivo_url) return res.status(400).json({ error: 'archivo_url requerido' });
+
+    const { rows } = await query(
+      `INSERT INTO evidencias (visita_id, usuario_id, archivo_url, descripcion)
+       VALUES ($1,$2,$3,$4) RETURNING id`,
+      [visitaId, usuario_id, archivo_url, descripcion || null]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (e) { next(e); }
+}
+
+/** =========================
+ * Logs
+ * ========================= */
+export async function getLogs(req, res, next) {
+  try {
+    const visitaId = Number(req.params.id);
+    const { rows } = await query(
+      `SELECT l.id, l.autor_id, u.nombre_completo AS autor_nombre,
+              l.estado_anterior_id, sa.etiqueta AS estado_anterior,
+              l.estado_nuevo_id, sn.etiqueta AS estado_nuevo,
+              l.nota, l.fecha
+       FROM visit_logs l
+       JOIN usuarios u ON u.id = l.autor_id
+       LEFT JOIN catalogo_items sa ON sa.id = l.estado_anterior_id
+       LEFT JOIN catalogo_items sn ON sn.id = l.estado_nuevo_id
+       WHERE l.visita_id=$1
+       ORDER BY l.fecha ASC`,
+      [visitaId]
+    );
+    res.json({ items: rows });
+  } catch (e) { next(e); }
+}
