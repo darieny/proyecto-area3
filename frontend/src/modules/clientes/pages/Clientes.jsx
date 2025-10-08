@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { useClientes } from "../hooks/useClientes.js";
@@ -7,7 +7,6 @@ import ClientesTable from "../components/ClientesTable";
 import { api } from "../../../services/http.js";
 import ModalPortal from "../../clientes/components/ModalPortal.jsx";
 import "../css/Clientes.css";
-
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 
 const PAGE_SIZE = 10;
@@ -26,6 +25,13 @@ export default function ClientesPage() {
   const { kpis, items, meta, loading, err } = useClientes({
     search, order, page, pageSize: PAGE_SIZE, refreshTick,
   });
+
+  // refrescar cuando alguien dispare "clientes:changed"
+  useEffect(() => {
+    const onChanged = () => setRefreshTick((t) => t + 1);
+    window.addEventListener("clientes:changed", onChanged);
+    return () => window.removeEventListener("clientes:changed", onChanged);
+  }, []);
 
   // ======= Modal: estado y handlers =======
   const [showModal, setShowModal] = useState(false);
@@ -119,6 +125,7 @@ export default function ClientesPage() {
       setShowModal(false);
       setPage(1);
       setRefreshTick((t) => t + 1);
+      window.dispatchEvent(new Event("clientes:changed"));
     } catch (err) {
       console.error("Error creando cliente", err);
       alert("No se pudo crear el cliente");
