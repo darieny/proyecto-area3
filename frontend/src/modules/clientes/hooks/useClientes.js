@@ -60,6 +60,15 @@ export function useClientes({
     return data; 
   }, []);
 
-  return { kpis, items, meta, loading, err, getCliente, updateCliente };
+  // trae la ubicación principal del cliente
+  const getUbicacionPrincipal = useCallback(async (clienteId) => {
+    const { data } = await api.get(`/ubicaciones/by-cliente/${clienteId}`);
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const principal = data.find(u => (u.etiqueta || "").toLowerCase() === "principal");
+    if (principal) return principal;
+    return data[0];
+  }, []);
+
+  return { kpis, items, meta, loading, err, getCliente, updateCliente, getUbicacionPrincipal };
 }
 
