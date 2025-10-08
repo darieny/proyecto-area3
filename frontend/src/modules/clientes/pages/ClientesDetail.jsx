@@ -14,9 +14,16 @@ export default function ClienteDetail() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    nombre: "", correo: "", telefono: "",
-    departamento: "", ciudad: "", notas: "", nit: "",
-    direccion_linea1: "", direccion_linea2: "", estado: "activo",
+    nombre: "",
+    correo: "",
+    telefono: "",
+    departamento: "",
+    ciudad: "",
+    notas: "",
+    nit: "",
+    direccion_linea1: "",
+    direccion_linea2: "",
+    estado: "activo",
   });
 
   useEffect(() => {
@@ -63,12 +70,18 @@ export default function ClienteDetail() {
         direccion_linea2: form.direccion_linea2 || null,
         estado: form.estado || "activo",
       };
-      const resp = await updateCliente(id, payload);
-      const actualizado = resp?.cliente ?? resp;
-      setCliente(actualizado);
+
+      // Actualiza en backend
+      await updateCliente(id, payload);
+
+      // Vuelve a leer el cliente actualizado completo
+      const refreshed = await getCliente(id);
+      setCliente(refreshed);
+
+      //  Cierra modo edición
       setEdit(false);
 
-      // Notifica a la tabla/listado
+      //  Notifica al listado general
       window.dispatchEvent(new Event("clientes:changed"));
     } catch (e) {
       console.error("No se pudo actualizar", e);
@@ -78,7 +91,12 @@ export default function ClienteDetail() {
     }
   };
 
-  if (!cliente) return <div className="cliente"><div className="cliente__card">Cargando cliente…</div></div>;
+  if (!cliente)
+    return (
+      <div className="cliente">
+        <div className="cliente__card">Cargando cliente…</div>
+      </div>
+    );
 
   return (
     <div className="shell">
@@ -94,24 +112,50 @@ export default function ClienteDetail() {
                 <div>
                   <h2 className="cliente__title">{cliente.nombre}</h2>
                   <div className="cliente__meta">
-                    <span className={`pill ${cliente.estado === "activo" ? "ok" : "bad"}`}>
+                    <span
+                      className={`pill ${
+                        cliente.estado === "activo" ? "ok" : "bad"
+                      }`}
+                    >
                       {cliente.estado === "activo" ? "Activo" : "Inactivo"}
                     </span>
                     {cliente.nit && <span className="chip">{cliente.nit}</span>}
-                    {cliente.ciudad && <span className="chip">{cliente.ciudad}</span>}
+                    {cliente.ciudad && (
+                      <span className="chip">{cliente.ciudad}</span>
+                    )}
                   </div>
                 </div>
                 <div className="cliente__actions">
-                  <Link to="/clientes" className="btn-light">← Volver</Link>
-                  <button className="btn-primary" onClick={() => setEdit(true)}>Editar</button>
+                  <Link to="/clientes" className="btn-light">
+                    ← Volver
+                  </Link>
+                  <button className="btn-primary" onClick={() => setEdit(true)}>
+                    Editar
+                  </button>
                 </div>
               </header>
 
               <div className="cliente__grid">
-                <div className="dato"><div className="dato__label">Correo</div><div className="dato__value">{cliente.correo || "—"}</div></div>
-                <div className="dato"><div className="dato__label">Teléfono</div><div className="dato__value">{cliente.telefono || "—"}</div></div>
-                <div className="dato"><div className="dato__label">Departamento</div><div className="dato__value">{cliente.departamento || "—"}</div></div>
-                <div className="dato"><div className="dato__label">Dirección</div><div className="dato__value">{cliente.direccion_linea1 || "—"}</div></div>
+                <div className="dato">
+                  <div className="dato__label">Correo</div>
+                  <div className="dato__value">{cliente.correo || "—"}</div>
+                </div>
+                <div className="dato">
+                  <div className="dato__label">Teléfono</div>
+                  <div className="dato__value">{cliente.telefono || "—"}</div>
+                </div>
+                <div className="dato">
+                  <div className="dato__label">Departamento</div>
+                  <div className="dato__value">
+                    {cliente.departamento || "—"}
+                  </div>
+                </div>
+                <div className="dato">
+                  <div className="dato__label">Dirección</div>
+                  <div className="dato__value">
+                    {cliente.direccion_linea1 || "—"}
+                  </div>
+                </div>
 
                 <div className="cliente__section">
                   <div className="dato__label">Notas</div>
@@ -126,14 +170,64 @@ export default function ClienteDetail() {
             <form onSubmit={onSave} className="cliente__card d-form">
               <h3>Editar cliente</h3>
 
-              <label>Nombre *<input name="nombre" value={form.nombre} onChange={onChange} required /></label>
-              <label>Correo<input name="correo" type="email" value={form.correo} onChange={onChange} /></label>
-              <label>Teléfono<input name="telefono" value={form.telefono} onChange={onChange} /></label>
-              <label>Departamento<input name="departamento" value={form.departamento} onChange={onChange} /></label>
-              <label>Ciudad<input name="ciudad" value={form.ciudad} onChange={onChange} /></label>
-              <label>Dirección<input name="direccion_linea1" value={form.direccion_linea1} onChange={onChange} /></label>
-              <label>Dirección (opcional)<input name="direccion_linea2" value={form.direccion_linea2} onChange={onChange} /></label>
-              <label>NIT / Empresa<input name="nit" value={form.nit} onChange={onChange} /></label>
+              <label>
+                Nombre *
+                <input
+                  name="nombre"
+                  value={form.nombre}
+                  onChange={onChange}
+                  required
+                />
+              </label>
+              <label>
+                Correo
+                <input
+                  name="correo"
+                  type="email"
+                  value={form.correo}
+                  onChange={onChange}
+                />
+              </label>
+              <label>
+                Teléfono
+                <input
+                  name="telefono"
+                  value={form.telefono}
+                  onChange={onChange}
+                />
+              </label>
+              <label>
+                Departamento
+                <input
+                  name="departamento"
+                  value={form.departamento}
+                  onChange={onChange}
+                />
+              </label>
+              <label>
+                Ciudad
+                <input name="ciudad" value={form.ciudad} onChange={onChange} />
+              </label>
+              <label>
+                Dirección
+                <input
+                  name="direccion_linea1"
+                  value={form.direccion_linea1}
+                  onChange={onChange}
+                />
+              </label>
+              <label>
+                Dirección (opcional)
+                <input
+                  name="direccion_linea2"
+                  value={form.direccion_linea2}
+                  onChange={onChange}
+                />
+              </label>
+              <label>
+                NIT / Empresa
+                <input name="nit" value={form.nit} onChange={onChange} />
+              </label>
               <label>
                 Estado
                 <select name="estado" value={form.estado} onChange={onChange}>
@@ -142,13 +236,28 @@ export default function ClienteDetail() {
                 </select>
               </label>
 
-              <label className="col-span">Notas
-                <textarea name="notas" rows={3} value={form.notas} onChange={onChange} />
+              <label className="col-span">
+                Notas
+                <textarea
+                  name="notas"
+                  rows={3}
+                  value={form.notas}
+                  onChange={onChange}
+                />
               </label>
 
               <div className="d-actions">
-                <button type="button" className="btn-light" onClick={() => setEdit(false)} disabled={saving}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</button>
+                <button
+                  type="button"
+                  className="btn-light"
+                  onClick={() => setEdit(false)}
+                  disabled={saving}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? "Guardando…" : "Guardar cambios"}
+                </button>
               </div>
             </form>
           )}
@@ -157,6 +266,3 @@ export default function ClienteDetail() {
     </div>
   );
 }
-
-
-
