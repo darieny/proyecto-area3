@@ -8,5 +8,3 @@
     { "src": "/api/(.*)", "dest": "backend/src/app.js" }
   ]
 }
-
-
