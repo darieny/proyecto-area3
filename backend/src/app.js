@@ -30,6 +30,11 @@ app.get('/api', (_req, res) => res.type('text').send('api viva'));
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'backend-area3' });
 });
+//Prueba de post login
+app.post('/api/auth/login-test', (req, res) => {
+  res.json({ ok: true, hit: 'POST /api/auth/login-test', body: req.body || null });
+});
+
 app.get('/api/db-ping', async (_req, res) => {
   try {
     const now = await pingDb();
