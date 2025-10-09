@@ -1,10 +1,4 @@
 {
   "version": 2,
-  "framework": null,
-  "builds": [
-    { "src": "backend/src/app.js", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "backend/src/app.js" }
-  ]
+  "framework": null
 }
