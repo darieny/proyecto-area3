@@ -1,6 +1,11 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" }
+  "framework": null,
+  "builds": [
+    { "src": "backend/src/serverless.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "backend/src/serverless.js" }
   ]
 }
+
