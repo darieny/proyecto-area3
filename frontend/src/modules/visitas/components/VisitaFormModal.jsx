@@ -6,17 +6,20 @@ import { useAuth } from "../../../context/AuthContext.jsx";
 export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}, onSaved }) {
   const { user } = useAuth();
   const { createVisita, saving, error } = useVisitaForm();
+
   const [form, setForm] = useState({
     clienteId: clienteId || "",
     ubicacionId: prefill.ubicacionId ?? null,
     telefono: prefill.telefono || "",
+    titulo: "",
     tipo: "mantenimiento",
     prioridad: "normal",
     observaciones: "",
-    files: [],
+    files: [],               // FileList (si luego subes evidencias)
     creadoPorId: user?.id ?? null,
   });
 
+  // Sincroniza props externas cuando cambian
   useEffect(() => {
     setForm((f) => ({
       ...f,
@@ -26,15 +29,24 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
       creadoPorId: user?.id ?? f.creadoPorId,
     }));
   }, [clienteId, prefill.telefono, prefill.ubicacionId, user?.id]);
-  
-  
 
   const fileInputRef = useRef(null);
-  const canSubmit = useMemo(() => form.clienteId && !saving, [form, saving]);
+
+  const canSubmit = useMemo(() => {
+    const hasTitulo = (form.titulo || "").trim().length >= 3;
+    return !!form.clienteId && hasTitulo && !saving;
+  }, [form, saving]);
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    setForm((f) => {
+      const next = { ...f, [name]: value };
+      // Autollenar título si aún no hay uno cuando cambian el tipo
+      if (name === "tipo" && !f.titulo) {
+        next.titulo = value.charAt(0).toUpperCase() + value.slice(1);
+      }
+      return next;
+    });
   }
 
   function handleFiles(e) {
@@ -48,7 +60,7 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
       onSaved?.(visita);
       onClose?.();
     } catch (e) {
-      console.error("Error creando visita:", e.response?.data || e.message);
+      console.error("Error creando visita:", e?.response?.data || e.message);
     }
   }
 
@@ -63,6 +75,19 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
         </div>
 
         <form className="modal-body visitas-form" onSubmit={handleSubmit}>
+
+          {/* Título */}
+          <label className="form-label">Título</label>
+          <input
+            className="input"
+            name="titulo"
+            value={form.titulo}
+            onChange={handleChange}
+            placeholder="Ej: Instalación de DVR"
+            required
+          />
+
+          {/* Dirección / Teléfono */}
           <div className="grid-2">
             <div>
               <label className="form-label">Dirección</label>
@@ -80,6 +105,7 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
             </div>
           </div>
 
+          {/* Tipo / Prioridad */}
           <div className="grid-2">
             <div>
               <label className="form-label">Tipo de visita</label>
@@ -101,6 +127,7 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
             </div>
           </div>
 
+          {/* Evidencias (futuro) */}
           <div>
             <label className="form-label">Adjuntar foto/evidencia</label>
             <input
@@ -113,6 +140,7 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
             />
           </div>
 
+          {/* Observaciones */}
           <div>
             <label className="form-label">Observaciones</label>
             <textarea
