@@ -7,7 +7,7 @@ import "../css/Clientes.css";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import VisitaFormModal from "../../visitas/components/VisitaFormModal";
 
-const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Guatemala
+const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 };
 const LIBRARIES = ["places"];
 
 export default function ClienteDetail() {
@@ -18,12 +18,11 @@ export default function ClienteDetail() {
   const [edit, setEdit] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // estado del modal de visitas
   const [openVisita, setOpenVisita] = useState(false);
 
-  //estado de ubicación
-  const [coords, setCoords] = useState(null); // { lat, lng }
+  const [coords, setCoords] = useState(null);
   const [placeLabel, setPlaceLabel] = useState("");
+  const [ubicacionId, setUbicacionId] = useState(null);
 
   const [form, setForm] = useState({
     nombre: "", correo: "", telefono: "",
@@ -31,7 +30,6 @@ export default function ClienteDetail() {
     direccion_linea1: "", direccion_linea2: "", estado: "activo",
   });
 
-  // Carga del cliente + ubicación principal
   useEffect(() => {
     (async () => {
       try {
@@ -50,7 +48,6 @@ export default function ClienteDetail() {
           estado: data.estado ?? "activo",
         });
 
-        // Si el cliente YA trae lat/long, se usa. Si no, pide la ubicación principal.
         if (data.latitud != null && data.longitud != null) {
           setCoords({ lat: Number(data.latitud), lng: Number(data.longitud) });
           setPlaceLabel(data.direccion_linea1 || data.nombre || "Ubicación");
@@ -59,6 +56,7 @@ export default function ClienteDetail() {
           if (u?.latitud != null && u?.longitud != null) {
             setCoords({ lat: Number(u.latitud), lng: Number(u.longitud) });
             setPlaceLabel(u.direccion_linea1 || u.etiqueta || "Ubicación principal");
+            setUbicacionId(u.id);
           } else {
             setCoords(null);
           }
@@ -92,15 +90,10 @@ export default function ClienteDetail() {
       };
 
       await updateCliente(id, payload);
-
-      // Re-fetch canónico
       const refreshed = await getCliente(id);
       setCliente(refreshed);
       setEdit(false);
-
-      // si cambió dirección textual, se mantiene etiqueta
       setPlaceLabel(refreshed.direccion_linea1 || placeLabel);
-
       window.dispatchEvent(new Event("clientes:changed"));
     } catch (e) {
       console.error("No se pudo actualizar", e);
@@ -110,7 +103,6 @@ export default function ClienteDetail() {
     }
   };
 
-  // Google Maps loader (solo para ver el punto)
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
     libraries: LIBRARIES,
@@ -131,9 +123,7 @@ export default function ClienteDetail() {
       <Sidebar />
       <main className="main">
         <Topbar />
-
         <div className="cliente">
-          {/* ===== VISTA LECTURA ===== */}
           {!edit && (
             <section className="cliente__card">
               <header className="cliente__header">
@@ -154,18 +144,13 @@ export default function ClienteDetail() {
                 </div>
               </header>
 
+              {/* ===== MAPA Y DETALLES ===== */}
               <div className="cliente__grid">
                 <div className="dato"><div className="dato__label">Correo</div><div className="dato__value">{cliente.correo || "—"}</div></div>
                 <div className="dato"><div className="dato__label">Teléfono</div><div className="dato__value">{cliente.telefono || "—"}</div></div>
                 <div className="dato"><div className="dato__label">Departamento</div><div className="dato__value">{cliente.departamento || "—"}</div></div>
                 <div className="dato"><div className="dato__label">Dirección</div><div className="dato__value">{cliente.direccion_linea1 || "—"}</div></div>
 
-                <div className="cliente__section">
-                  <div className="dato__label">Notas</div>
-                  <div className="box">{cliente.notas || "—"}</div>
-                </div>
-
-                {/* ===== MAPA ===== */}
                 {coords && (
                   <div className="cliente__section">
                     <div className="dato__label">Ubicación</div>
@@ -191,49 +176,23 @@ export default function ClienteDetail() {
               </div>
             </section>
           )}
-
-          {/* ===== VISTA EDICIÓN ===== */}
-          {edit && (
-            <form onSubmit={onSave} className="cliente__card d-form">
-              <h3>Editar cliente</h3>
-              <label>Nombre *<input name="nombre" value={form.nombre} onChange={onChange} required /></label>
-              <label>Correo<input name="correo" type="email" value={form.correo} onChange={onChange} /></label>
-              <label>Teléfono<input name="telefono" value={form.telefono} onChange={onChange} /></label>
-              <label>Departamento<input name="departamento" value={form.departamento} onChange={onChange} /></label>
-              <label>Ciudad<input name="ciudad" value={form.ciudad} onChange={onChange} /></label>
-              <label>Dirección<input name="direccion_linea1" value={form.direccion_linea1} onChange={onChange} /></label>
-              <label>Dirección (opcional)<input name="direccion_linea2" value={form.direccion_linea2} onChange={onChange} /></label>
-              <label>NIT / Empresa<input name="nit" value={form.nit} onChange={onChange} /></label>
-              <label>
-                Estado
-                <select name="estado" value={form.estado} onChange={onChange}>
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
-              </label>
-              <label className="col-span">Notas
-                <textarea name="notas" rows={3} value={form.notas} onChange={onChange} />
-              </label>
-              <div className="d-actions">
-                <button type="button" className="btn-light" onClick={() => setEdit(false)} disabled={saving}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</button>
-              </div>
-            </form>
-          )}
         </div>
+
         {/* Modal para crear visita */}
         <VisitaFormModal
           open={openVisita}
           onClose={() => setOpenVisita(false)}
           clienteId={cliente.id}
-          prefill={{ direccion: cliente.direccion_linea1, telefono: cliente.telefono }}
-          onSaved={(v) => {
-            // aquí luego refrescamos “Últimas visitas”
-            console.log("Visita creada:", v);
+          prefill={{
+            direccion: cliente.direccion_linea1,
+            telefono: cliente.telefono,
+            ubicacionId: ubicacionId,
           }}
+          onSaved={(v) => console.log("Visita creada:", v)}
         />
       </main>
     </div>
   );
 }
+
 
