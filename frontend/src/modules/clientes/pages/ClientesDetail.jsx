@@ -5,6 +5,7 @@ import Topbar from "../../dashboard/components/Topbar";
 import { useClientes } from "../hooks/useClientes";
 import "../css/Clientes.css";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import VisitaFormModal from "../../visitas/components/VisitaFormModal";
 
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Guatemala
 const LIBRARIES = ["places"];
@@ -16,6 +17,9 @@ export default function ClienteDetail() {
   const [cliente, setCliente] = useState(null);
   const [edit, setEdit] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // estado del modal de visitas
+  const [openVisita, setOpenVisita] = useState(false);
 
   //estado de ubicación
   const [coords, setCoords] = useState(null); // { lat, lng }
@@ -145,6 +149,7 @@ export default function ClienteDetail() {
                 </div>
                 <div className="cliente__actions">
                   <Link to="/clientes" className="btn-light">← Volver</Link>
+                  <button className="btn-primary" onClick={() => setOpenVisita(true)}>Nueva visita</button>
                   <button className="btn-primary" onClick={() => setEdit(true)}>Editar</button>
                 </div>
               </header>
@@ -216,6 +221,17 @@ export default function ClienteDetail() {
             </form>
           )}
         </div>
+        {/* Modal para crear visita */}
+        <VisitaFormModal
+          open={openVisita}
+          onClose={() => setOpenVisita(false)}
+          clienteId={cliente.id}
+          prefill={{ direccion: cliente.direccion_linea1, telefono: cliente.telefono }}
+          onSaved={(v) => {
+            // aquí luego refrescamos “Últimas visitas”
+            console.log("Visita creada:", v);
+          }}
+        />
       </main>
     </div>
   );
