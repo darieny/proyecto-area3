@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useVisitaForm } from "../hooks/useVisitaForm.js";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}, onSaved }) {
+  const { user } = useAuth();
   const { createVisita, saving, error } = useVisitaForm();
   const [form, setForm] = useState({
     clienteId: clienteId || "",
@@ -12,6 +14,7 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
     prioridad: "normal",
     observaciones: "",
     files: [],
+    creadoPorId: user?.id ?? null,
   });
 
   useEffect(() => {
@@ -20,8 +23,11 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
       clienteId: clienteId || f.clienteId,
       telefono: prefill.telefono ?? f.telefono,
       ubicacionId: prefill.ubicacionId ?? f.ubicacionId,
+      creadoPorId: user?.id ?? f.creadoPorId,
     }));
-  }, [clienteId, prefill.telefono, prefill.ubicacionId]);
+  }, [clienteId, prefill.telefono, prefill.ubicacionId, user?.id]);
+  
+  
 
   const fileInputRef = useRef(null);
   const canSubmit = useMemo(() => form.clienteId && !saving, [form, saving]);

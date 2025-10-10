@@ -1,15 +1,23 @@
 import { api } from "./http.js";
 
-// Helpers opcionales para mapear request/response
-const mapCreate = (data) => ({
-  titulo: data.titulo || "Visita programada",
-  descripcion: data.observaciones ?? "",
-  creado_por_id: data.creadoPorId ?? null,
-  ubicacion_id: data.ubicacionId ?? null,
-  status_id: 1,
-  programada_inicio: data.programadaInicio ?? null,
-  programada_fin: data.programadaFin ?? null, // ids de archivos
-});
+function oneHourWindow() {
+  const start = new Date();
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+const mapCreate = (data) => {
+  const { start, end } = oneHourWindow();
+  return {
+    titulo: data.titulo || "Visita programada",
+    descripcion: data.observaciones ?? "",
+    creado_por_id: data.creadoPorId,
+    ubicacion_id: data.ubicacionId ?? null,
+    status_id: 1,
+    programada_inicio: data.programadaInicio ?? start,
+    programada_fin: data.programadaFin ?? end,
+  };
+};
 
 export const visitasApi = {
   async list(params = {}) {
