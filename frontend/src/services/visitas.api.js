@@ -2,13 +2,13 @@ import { api } from "./http.js";
 
 // Helpers opcionales para mapear request/response
 const mapCreate = (data) => ({
-  cliente_id: data.clienteId,
+  titulo: data.titulo || "Visita programada",
+  descripcion: data.observaciones ?? "",
+  creado_por_id: data.creadoPorId ?? null,
   ubicacion_id: data.ubicacionId ?? null,
-  telefono: data.telefono ?? null,
-  tipo: data.tipo,
-  prioridad: data.prioridad,
-  observaciones: data.observaciones ?? "",
-  evidencias: data.evidencias ?? [], // ids de archivos
+  status_id: 1,
+  programada_inicio: data.programadaInicio ?? null,
+  programada_fin: data.programadaFin ?? null, // ids de archivos
 });
 
 export const visitasApi = {
@@ -24,8 +24,9 @@ export const visitasApi = {
   },
 
   async create(payload) {
+    if (!payload.clienteId) throw new Error("clienteId es requerido para crear una visita");
     const body = mapCreate(payload);
-    const { data } = await api.post("/visitas", body);
+    const { data } = await api.post(`/clientes/${payload.clienteId}/visitas`, body);
     return data;
   },
 
