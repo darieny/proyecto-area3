@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useState } from "react";
-import { visitasApi } from "../../services/visitas.api.js";
+import { visitasApi } from "../../../services/visitas.api.js";
 
 /**
  * Drawer lateral para ver/editar estado y evidencias rápidas.
