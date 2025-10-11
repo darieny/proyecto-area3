@@ -1,4 +1,3 @@
-// src/modules/visitas/components/VisitaDetailDrawer.jsx
 import { useEffect, useMemo, useState } from "react";
 import { visitasApi } from "../../../services/visitas.api.js";
 import "../css/visitas.css";
@@ -15,26 +14,14 @@ function fmt(iso) {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
-    return (
-      d.toLocaleDateString() +
-      " " +
-      d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    );
-  } catch {
-    return "—";
-  }
+    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch { return "—"; }
 }
 
-export default function VisitaDetailDrawer({
-  open,
-  onClose,
-  visita,
-  onUpdated,
-}) {
-  const [data, setData] = useState(null); // detalle de la visita
+export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated }) {
+  const [data, setData] = useState(null);   
   const [loading, setLoading] = useState(false);
 
-  // para cambiar estado
   const [estado, setEstado] = useState(1);
   const [saving, setSaving] = useState(false);
 
@@ -42,32 +29,26 @@ export default function VisitaDetailDrawer({
   useEffect(() => {
     if (!open || !visita) return;
 
-    // usa lo que ya viene de la fila mientras carga
-    setData(visita);
-    setEstado(Number(visita.status_id || 1));
+
+    setData(visita ?? null);
+    setEstado(Number(visita?.status_id ?? 1));
 
     let alive = true;
     (async () => {
       try {
         setLoading(true);
-        // trae el detalle completo por id
         const full = await visitasApi.getById(visita.id);
         if (!alive) return;
-        setData(full);
+        setData(full ?? null);
         if (full?.status_id != null) setEstado(Number(full.status_id));
       } catch (e) {
-        console.error(
-          "No se pudo cargar detalle de visita",
-          e?.response?.data || e
-        );
+        console.error("No se pudo cargar detalle de visita", e?.response?.data || e);
       } finally {
         if (alive) setLoading(false);
       }
     })();
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [open, visita]);
 
   async function guardarEstado() {
@@ -75,7 +56,7 @@ export default function VisitaDetailDrawer({
     try {
       setSaving(true);
       const updated = await visitasApi.patchEstado(data.id, Number(estado));
-      setData(updated);
+      setData(updated ?? data);
       onUpdated?.(updated);
     } catch (e) {
       console.error("No se pudo actualizar estado", e?.response?.data || e);
@@ -85,10 +66,10 @@ export default function VisitaDetailDrawer({
     }
   }
 
-  const clienteNombre = useMemo(
-    () => data?.cliente_nombre || `Cliente #${data?.cliente_id || "—"}`,
-    [data]
-  );
+  const clienteNombre = useMemo(() => {
+    if (!data) return "—";
+    return data.cliente_nombre ?? (data.cliente_id ? `Cliente #${data.cliente_id}` : "—");
+  }, [data]);
 
   if (!open) return null;
 
@@ -97,101 +78,88 @@ export default function VisitaDetailDrawer({
       <div className="drawer__panel">
         <header className="drawer__header">
           <h3>Visita</h3>
-          <button className="btn-icon" onClick={onClose} aria-label="Cerrar">
-            ✕
-          </button>
+          <button className="btn-icon" onClick={onClose} aria-label="Cerrar">✕</button>
         </header>
 
         <div className="drawer__body">
-          <div className="v-group">
-            <div className="v-item">
-              <div className="label">Cliente</div>
-              <div className="value">{clienteNombre}</div>
-            </div>
+          {!data ? (
+            <div>Cargando…</div>
+          ) : (
+            <div className="v-group">
+              <div className="v-item">
+                <div className="label">Cliente</div>
+                <div className="value">{clienteNombre}</div>
+              </div>
 
-            <div className="v-item">
-              <div className="label">Título</div>
-              <div className="value">
-                <b>{data.titulo || "—"}</b>
+              <div className="v-item">
+                <div className="label">Título</div>
+                <div className="value"><b>{data?.titulo ?? "—"}</b></div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Fecha programada</div>
+                <div className="value">
+                  {fmt(data?.programada_inicio)}
+                  {data?.programada_fin ? ` • ${fmt(data.programada_fin)}` : ""}
+                </div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Tipo</div>
+                <div className="value">{data?.tipo ?? "—"}</div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Prioridad</div>
+                <div className="value">{data?.prioridad ?? "—"}</div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Teléfono</div>
+                <div className="value">{data?.telefono ?? "—"}</div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Ubicación</div>
+                <div className="value">
+                  {data?.ubicacion_etiqueta ?? data?.direccion ?? data?.direccion_linea1 ?? "—"}
+                </div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Estado</div>
+                <div className="value">
+                  <select
+                    className="input"
+                    value={estado}
+                    onChange={(e) => setEstado(Number(e.target.value))}
+                    disabled={saving}
+                  >
+                    {Object.entries(STATUS).map(([id, label]) => (
+                      <option key={id} value={id}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="v-item">
+                <div className="label">Observaciones</div>
+                <div className="value">{data?.descripcion ?? data?.observaciones ?? "—"}</div>
               </div>
             </div>
-
-            <div className="v-item">
-              <div className="label">Fecha programada</div>
-              <div className="value">
-                {fmt(data.programada_inicio)}
-                {data.programada_fin ? ` • ${fmt(data.programada_fin)}` : ""}
-              </div>
-            </div>
-
-            <div className="v-item">
-              <div className="label">Tipo</div>
-              <div className="value">{data.tipo || "—"}</div>
-            </div>
-
-            <div className="v-item">
-              <div className="label">Prioridad</div>
-              <div className="value">{data.prioridad || "—"}</div>
-            </div>
-
-            <div className="v-item">
-              <div className="label">Teléfono</div>
-              <div className="value">{data.telefono || "—"}</div>
-            </div>
-
-            <div className="v-item">
-              <div className="label">Ubicación</div>
-              <div className="value">
-                {data.ubicacion_etiqueta ||
-                  data.direccion ||
-                  data.direccion_linea1 ||
-                  "—"}
-              </div>
-            </div>
-
-            <div className="v-item">
-              <div className="label">Estado</div>
-              <div className="value">
-                <select
-                  className="input"
-                  value={estado}
-                  onChange={(e) => setEstado(Number(e.target.value))}
-                  disabled={saving}
-                >
-                  {Object.entries(STATUS).map(([id, label]) => (
-                    <option key={id} value={id}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="v-item">
-              <div className="label">Observaciones</div>
-              <div className="value">
-                {data.descripcion || data.observaciones || "—"}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         <footer className="drawer__footer">
-          <button className="btn ghost" onClick={onClose}>
-            Cerrar
-          </button>
-          <button
-            className="btn primary"
-            onClick={guardarEstado}
-            disabled={saving || loading}
-          >
+          <button className="btn ghost" onClick={onClose}>Cerrar</button>
+          <button className="btn primary" onClick={guardarEstado} disabled={saving || loading || !data}>
             {saving ? "Guardando…" : "Guardar estado"}
           </button>
         </footer>
       </div>
 
-      {/* backdrop */}
       <div className="drawer__backdrop" onClick={onClose} />
     </div>
   );
 }
+
