@@ -41,9 +41,7 @@ export default function VisitasTable({ items, meta, loading, onOpenDetail, onPag
               <td>{v.cliente_nombre || `#${v.cliente_id}`}</td>
               <td>{v.titulo || "—"}</td>
               <td>
-                <span className={`tag estado-${STATUS[v.status_id]?.toLowerCase() || "desconocido"}`}>
-                  {STATUS[v.status_id] || "—"}
-                </span>
+                <span className={`tag estado-${(STATUS[v.status_id]||"").toLowerCase()}`}>{STATUS[v.status_id] || "—"}</span>
               </td>
               <td className="ellipsis">{v.observaciones || "—"}</td>
               <td className="tright">
