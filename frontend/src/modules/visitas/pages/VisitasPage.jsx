@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import Sidebar from "../../dashboard/components/Sidebar";
+import Topbar from "../../dashboard/components/Topbar";
+
 import VisitasFilters from "../components/VisitasFilters.jsx";
 import VisitasKpis from "../components/VisitasKpis.jsx";
 import VisitasTable from "../components/VisitasTable.jsx";
@@ -8,9 +11,6 @@ import VisitaDetailDrawer from "../components/VisitaDetailDrawer.jsx";
 import { useVisitas } from "../hooks/useVisitas.js";
 import "../css/visitas.css";
 
-/**
- * Parse helpers: lee filtros desde la URL y los normaliza
- */
 function parseQS(sp) {
   const toNum = (v, def) => (v && !Number.isNaN(Number(v)) ? Number(v) : def);
   const val = (k) => (sp.get(k) ?? "").trim() || "";
@@ -28,71 +28,102 @@ function parseQS(sp) {
 }
 
 function buildQS(filters) {
-  const entries = Object.entries(filters)
-    .filter(([_, v]) => v !== "" && v != null); // evita ruido en la URL
   const usp = new URLSearchParams();
-  for (const [k, v] of entries) usp.set(k, String(v));
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== "" && v != null) usp.set(k, String(v));
+  });
   return usp;
 }
 
 export default function VisitasPage() {
   const [sp, setSp] = useSearchParams();
-
-  // 1) hidrata filtros desde la URL al montar
-  const initialFromQS = useMemo(() => parseQS(sp), []); // solo 1 vez
+  const initialFromQS = useMemo(() => parseQS(sp), []); // hidrata una vez
 
   const { items, meta, loading, filters, setFilters } = useVisitas({
     pageSize: 10,
     ...initialFromQS,
   });
 
-  const [selected, setSelected] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // KPIs rápidos en cliente (provisorios)
+  const kpis = useMemo(() => {
+    const now = Date.now();
+    const isSameDay = (iso) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      const t = new Date();
+      return (
+        d.getFullYear() === t.getFullYear() &&
+        d.getMonth() === t.getMonth() &&
+        d.getDate() === t.getDate()
+      );
+    };
 
-  // 2) sincroniza URL cada vez que cambian los filtros
+    let hoy = 0;
+    let atrasadas = 0;
+    let semanaCompletadas = 0;
+
+    for (const v of items) {
+      if (isSameDay(v.programada_inicio)) hoy += 1;
+
+      // atrasadas: programadas con fin ya pasado
+      if (Number(v.status_id) === 1) {
+        const fin = v.programada_fin ? Date.parse(v.programada_fin) : null;
+        if (fin && fin < now) atrasadas += 1;
+      }
+
+      // completadas últimos 7 días
+      if (Number(v.status_id) === 3) {
+        const ini = v.programada_inicio ? Date.parse(v.programada_inicio) : null;
+        if (ini && now - ini <= 7 * 24 * 3600 * 1000) semanaCompletadas += 1;
+      }
+    }
+
+    return { hoy, atrasadas, semanaCompletadas };
+  }, [items]);
+
+  // sincroniza la URL con los filtros
   useEffect(() => {
-    const qs = buildQS(filters);
-    setSp(qs, { replace: true }); // replace para no romper el historial
+    setSp(buildQS(filters), { replace: true });
   }, [filters, setSp]);
 
-  function openDetail(v) {
-    setSelected(v);
-    setDrawerOpen(true);
-  }
-  function closeDetail() {
-    setDrawerOpen(false);
-    setSelected(null);
-  }
-  function updateFromDrawer(_v) {
-    // tras cambiar estado, refrescamos tocando filters
-    closeDetail();
-    setFilters({ ...filters });
-  }
+  // Drawer
+  const [selected, setSelected] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const openDetail = (v) => { setSelected(v); setDrawerOpen(true); };
+  const closeDetail = () => { setSelected(null); setDrawerOpen(false); };
+  const updateFromDrawer = () => { closeDetail(); setFilters({ ...filters }); };
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h2>Visitas</h2>
-      </div>
+    <div className="shell">
+      <Sidebar />
+      <main className="main">
+        <Topbar />
 
-      <VisitasKpis stats={{ hoy: 0, atrasadas: 0, semanaCompletadas: 0 }} />
+        <div className="page">
+          <div className="page-header">
+            <h2>Visitas</h2>
+          </div>
 
-      <VisitasFilters value={filters} onChange={setFilters} />
+          <VisitasKpis stats={kpis} />
 
-      <VisitasTable
-        items={items}
-        meta={meta}
-        loading={loading}
-        onOpenDetail={openDetail}
-        onPageChange={(p) => setFilters({ ...filters, page: p })}
-      />
+          <VisitasFilters value={filters} onChange={setFilters} />
 
-      <VisitaDetailDrawer
-        open={drawerOpen}
-        onClose={closeDetail}
-        visita={selected}
-        onUpdated={updateFromDrawer}
-      />
+          <VisitasTable
+            items={items}
+            meta={meta}
+            loading={loading}
+            onOpenDetail={openDetail}
+            onPageChange={(p) => setFilters({ ...filters, page: p })}
+          />
+
+          <VisitaDetailDrawer
+            open={drawerOpen}
+            onClose={closeDetail}
+            visita={selected}
+            onUpdated={updateFromDrawer}
+          />
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,5 +1,14 @@
 import { useMemo } from "react";
 
+// Mapeo del estado numérico a texto
+const STATUS = {
+  1: "Programada",
+  2: "En progreso",
+  3: "Completada",
+  4: "Cancelada",
+  5: "Pendiente",
+};
+
 export default function VisitasTable({ items, meta, loading, onOpenDetail, onPageChange }) {
   const rows = useMemo(() => items || [], [items]);
 
@@ -8,30 +17,35 @@ export default function VisitasTable({ items, meta, loading, onOpenDetail, onPag
       <table className="table">
         <thead>
           <tr>
-            <th>Fecha</th>
+            <th>Fecha programada</th>
             <th>Cliente</th>
-            <th>Tipo</th>
-            <th>Prioridad</th>
+            <th>Título</th>
             <th>Estado</th>
             <th>Observaciones</th>
             <th></th>
           </tr>
         </thead>
+
         <tbody>
           {loading && (
-            <tr><td colSpan={7} className="tcenter">Cargando…</td></tr>
+            <tr><td colSpan={6} className="tcenter">Cargando…</td></tr>
           )}
+
           {!loading && rows.length === 0 && (
-            <tr><td colSpan={7} className="tcenter">Sin resultados</td></tr>
+            <tr><td colSpan={6} className="tcenter">Sin resultados</td></tr>
           )}
+
           {!loading && rows.map(v => (
             <tr key={v.id}>
-              <td>{formatDate(v.fecha || v.created_at)}</td>
-              <td>{v.cliente_nombre || v.cliente_id}</td>
-              <td className="tag">{v.tipo}</td>
-              <td className={`tag prio-${v.prioridad}`}>{v.prioridad}</td>
-              <td className={`tag estado-${v.estado}`}>{v.estado}</td>
-              <td className="ellipsis">{v.observaciones}</td>
+              <td>{formatDate(v.programada_inicio)}</td>
+              <td>{v.cliente_nombre || `#${v.cliente_id}`}</td>
+              <td>{v.titulo || "—"}</td>
+              <td>
+                <span className={`tag estado-${STATUS[v.status_id]?.toLowerCase() || "desconocido"}`}>
+                  {STATUS[v.status_id] || "—"}
+                </span>
+              </td>
+              <td className="ellipsis">{v.observaciones || "—"}</td>
               <td className="tright">
                 <button className="btn small" onClick={() => onOpenDetail(v)}>Ver</button>
               </td>
@@ -40,15 +54,31 @@ export default function VisitasTable({ items, meta, loading, onOpenDetail, onPag
         </tbody>
       </table>
 
+      {/* paginación */}
       <div className="pagination">
-        <button className="btn small ghost" disabled={meta.page <= 1} onClick={() => onPageChange(meta.page - 1)}>Anterior</button>
+        <button
+          className="btn small ghost"
+          disabled={meta.page <= 1}
+          onClick={() => onPageChange(meta.page - 1)}
+        >
+          Anterior
+        </button>
+
         <span>Página {meta.page} de {meta.totalPages || 1}</span>
-        <button className="btn small ghost" disabled={meta.page >= (meta.totalPages || 1)} onClick={() => onPageChange(meta.page + 1)}>Siguiente</button>
+
+        <button
+          className="btn small ghost"
+          disabled={meta.page >= (meta.totalPages || 1)}
+          onClick={() => onPageChange(meta.page + 1)}
+        >
+          Siguiente
+        </button>
       </div>
     </div>
   );
 }
 
+// ======= Helpers =======
 function formatDate(s) {
   if (!s) return "-";
   const d = new Date(s);
