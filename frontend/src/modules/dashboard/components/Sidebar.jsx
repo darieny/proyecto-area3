@@ -26,10 +26,10 @@ export default function Sidebar({ collapsed, onNavigate }) {
           <span className="sb__text">Clientes</span>
         </NavLink>
 
-        <button className="sb__item" type="button" onClick={onNavigate}>
+        <NavLink to="/visitas" className={linkClass}>
           <span className="ico">📊</span>
           <span className="sb__text">Visitas / Reportes</span>
-        </button>
+          </NavLink>
       </nav>
 
       <nav className="sb__section mt">

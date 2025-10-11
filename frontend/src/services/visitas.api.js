@@ -53,4 +53,13 @@ export const visitasApi = {
     });
     return data; // { id, url, ... }
   },
+
+
+  //para listar las visitas
+  async listByCliente(clienteId, params = {}) {
+    const { data } = await api.get("/visitas", {
+      params: { cliente_id: clienteId, limit: params.limit ?? 5 }
+    });
+    return data; // { items, meta }
+  },
 };

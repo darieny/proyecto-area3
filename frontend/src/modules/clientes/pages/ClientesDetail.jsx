@@ -1,17 +1,20 @@
 import { useEffect, useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { useClientes } from "../hooks/useClientes";
 import "../css/Clientes.css";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import VisitaFormModal from "../../visitas/components/VisitaFormModal";
+import { useVisitas } from "../../visitas/hooks/useVisitas.js";
+import ClienteVisitasWidget from "../../visitas/components/ClienteVisitasWidget.jsx";
 
-const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 };
+const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; //Guatemala
 const LIBRARIES = ["places"];
 
 export default function ClienteDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { getCliente, updateCliente, getUbicacionPrincipal } = useClientes();
 
   const [cliente, setCliente] = useState(null);
@@ -29,6 +32,14 @@ export default function ClienteDetail() {
     departamento: "", ciudad: "", notas: "", nit: "",
     direccion_linea1: "", direccion_linea2: "", estado: "activo",
   });
+
+  // Últimas visitas del cliente (5)
+  const {
+    items: visitasCliente,
+    loading: loadingVisitas,
+    filters: visitasFilters,
+    setFilters: setVisitasFilters,
+  } = useVisitas({ cliente_id: id, page: 1, pageSize: 5 });
 
   useEffect(() => {
     (async () => {
@@ -146,10 +157,22 @@ export default function ClienteDetail() {
 
               {/* ===== MAPA Y DETALLES ===== */}
               <div className="cliente__grid">
-                <div className="dato"><div className="dato__label">Correo</div><div className="dato__value">{cliente.correo || "—"}</div></div>
-                <div className="dato"><div className="dato__label">Teléfono</div><div className="dato__value">{cliente.telefono || "—"}</div></div>
-                <div className="dato"><div className="dato__label">Departamento</div><div className="dato__value">{cliente.departamento || "—"}</div></div>
-                <div className="dato"><div className="dato__label">Dirección</div><div className="dato__value">{cliente.direccion_linea1 || "—"}</div></div>
+                <div className="dato">
+                  <div className="dato__label">Correo</div>
+                  <div className="dato__value">{cliente.correo || "—"}</div>
+                </div>
+                <div className="dato">
+                  <div className="dato__label">Teléfono</div>
+                  <div className="dato__value">{cliente.telefono || "—"}</div>
+                </div>
+                <div className="dato">
+                  <div className="dato__label">Departamento</div>
+                  <div className="dato__value">{cliente.departamento || "—"}</div>
+                </div>
+                <div className="dato">
+                  <div className="dato__label">Dirección</div>
+                  <div className="dato__value">{cliente.direccion_linea1 || "—"}</div>
+                </div>
 
                 {coords && (
                   <div className="cliente__section">
@@ -173,9 +196,17 @@ export default function ClienteDetail() {
                     </small>
                   </div>
                 )}
+
+                {/* ===== ÚLTIMAS VISITAS DEL CLIENTE ===== */}
+                <ClienteVisitasWidget
+                  items={visitasCliente}
+                  loading={loadingVisitas}
+                  onVerTodas={() => navigate(`/visitas?cliente_id=${id}`)}
+                />
               </div>
             </section>
           )}
+
         </div>
 
         {/* Modal para crear visita */}
@@ -188,11 +219,14 @@ export default function ClienteDetail() {
             telefono: cliente.telefono,
             ubicacionId: ubicacionId,
           }}
-          onSaved={(v) => console.log("Visita creada:", v)}
+          onSaved={() => {
+            setVisitasFilters({ ...visitasFilters });
+          }}
         />
       </main>
     </div>
   );
 }
+
 
 
