@@ -1,4 +1,6 @@
+// src/modules/visitas/components/VisitaDetailDrawer.jsx
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { visitasApi } from "../../../services/visitas.api.js";
 import "../css/visitas.css";
 
@@ -15,20 +17,31 @@ function fmt(iso) {
   try {
     const d = new Date(iso);
     return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  } catch { return "—"; }
+  } catch {
+    return "—";
+  }
 }
 
 export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated }) {
-  const [data, setData] = useState(null);   
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [estado, setEstado] = useState(1);
   const [saving, setSaving] = useState(false);
 
-  // Cargar detalle al abrir
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+
   useEffect(() => {
     if (!open || !visita) return;
-
 
     setData(visita ?? null);
     setEstado(Number(visita?.status_id ?? 1));
@@ -48,14 +61,20 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
       }
     })();
 
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [open, visita]);
 
   async function guardarEstado() {
     if (!data?.id) return;
     try {
       setSaving(true);
-      const updated = await visitasApi.patchEstado(data.id, Number(estado));
+      const updated =
+        typeof visitasApi.patchEstado === "function"
+          ? await visitasApi.patchEstado(data.id, Number(estado))
+          : await visitasApi.patch(data.id, { status_id: Number(estado) });
+
       setData(updated ?? data);
       onUpdated?.(updated);
     } catch (e) {
@@ -73,8 +92,8 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
 
   if (!open) return null;
 
-  return (
-    <div className={`drawer ${open ? "open" : ""}`}>
+  return createPortal(
+    <div className="drawer open">
       <div className="drawer__panel">
         <header className="drawer__header">
           <h3>Visita</h3>
@@ -152,14 +171,20 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
 
         <footer className="drawer__footer">
           <button className="btn ghost" onClick={onClose}>Cerrar</button>
-          <button className="btn primary" onClick={guardarEstado} disabled={saving || loading || !data}>
+          <button
+            className="btn primary"
+            onClick={guardarEstado}
+            disabled={saving || loading || !data}
+          >
             {saving ? "Guardando…" : "Guardar estado"}
           </button>
         </footer>
       </div>
 
       <div className="drawer__backdrop" onClick={onClose} />
-    </div>
+    </div>,
+    document.body
   );
 }
+
 
