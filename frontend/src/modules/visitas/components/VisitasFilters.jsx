@@ -48,6 +48,7 @@ export default function VisitasFilters({ value, onChange }) {
         <option value="en_progreso">En progreso</option>
         <option value="completada">Completada</option>
         <option value="cancelada">Cancelada</option>
+        <option value="5">Pendiente</option>
       </select>
 
       <input className="input" type="date" value={local.from || ""} onChange={(e)=>setField("from", e.target.value)} />
