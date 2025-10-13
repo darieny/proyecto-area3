@@ -43,7 +43,7 @@ export default function VisitasTable({ items, meta, loading, onOpenDetail, onPag
               <td>
                 <span className={`tag estado-${(STATUS[v.status_id]||"").toLowerCase()}`}>{STATUS[v.status_id] || "—"}</span>
               </td>
-              <td className="ellipsis">{v.observaciones || "—"}</td>
+              <td className="ellipsis">{v.descripcion || "—"}</td>
               <td className="tright">
                 <button className="btn small" onClick={() => onOpenDetail(v)}>Ver</button>
               </td>
