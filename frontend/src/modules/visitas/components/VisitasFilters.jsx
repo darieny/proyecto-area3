@@ -42,7 +42,7 @@ export default function VisitasFilters({ value, onChange }) {
         <option value="urgente">Urgente</option>
       </select>
 
-      <select className="input" value={local.estado || ""} onChange={(e) => setField("estado", e.target.value)}>
+      <select className="input" value={local.estado ?? ""} onChange={(e) => setField("estado", e.target.value)}>
         <option value="">Estado (todos)</option>
         <option value="programada">Programada</option>
         <option value="en_progreso">En progreso</option>
