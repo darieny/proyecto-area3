@@ -1,14 +1,10 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+// src/modules/visitas/hooks/useVisitas.js
+import { useEffect, useState } from "react";
 import { visitasApi } from "../../../services/visitas.api.js";
 
 export function useVisitas(initial = {}) {
   const [items, setItems] = useState([]);
-  const [meta, setMeta] = useState({
-    total: 0,
-    page: 1,
-    pageSize: 10,
-    totalPages: 1,
-  });
+  const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 10, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,42 +14,44 @@ export function useVisitas(initial = {}) {
     pageSize: 10,
     tipo: "",
     prioridad: "",
-    estado: "",
+    estado: "",         
     from: "",
     to: "",
     ...initial,
   });
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await visitasApi.list(filters);
-      setItems(data.items || []);
-      setMeta(
-        data.meta || {
-          total: 0,
-          page: 1,
-          pageSize: filters.pageSize,
-          totalPages: 1,
-        }
-      );
-      setError("");
-    } catch (err) {
-      setError(err?.response?.data?.message || "Error cargando visitas");
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+  // helper para setFilters que siempre resetea a página 1
+  function updateFilters(partial) {
+    setFilters((f) => ({ ...f, page: 1, ...partial }));
+  }
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
 
-  // permite refrescar manualmente
-  const refresh = useCallback(() => {
-    fetchData();
-  }, [fetchData]);
+        // convertir fechas a ISO si vienen como yyyy-mm-dd
+        const q = { ...filters };
+        if (q.from && q.from.length <= 10) q.from = new Date(q.from + "T00:00:00").toISOString();
+        if (q.to && q.to.length <= 10)     q.to   = new Date(q.to   + "T23:59:59").toISOString();
 
-  return { items, meta, loading, error, filters, setFilters, refresh };
+        const data = await visitasApi.list(q);
+        if (!alive) return;
+        setItems(data.items || []);
+        setMeta(data.meta || { total: 0, page: q.page, pageSize: q.pageSize, totalPages: 1 });
+        setError("");
+      } catch (err) {
+        if (!alive) return;
+        setError(err?.response?.data?.message || "Error cargando visitas");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [filters]);
+
+  return { items, meta, loading, error, filters, setFilters: updateFilters };
 }
+
 
