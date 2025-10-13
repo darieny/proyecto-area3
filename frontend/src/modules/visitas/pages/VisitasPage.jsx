@@ -36,6 +36,8 @@ function buildQS(filters) {
 }
 
 export default function VisitasPage() {
+  const [collapsed, setCollapsed] = useState(false);   // desktop
+  const [mobileOpen, setMobileOpen] = useState(false); // cel
   const [sp, setSp] = useSearchParams();
   const initialFromQS = useMemo(() => parseQS(sp), []); // hidrata una vez
 
@@ -94,10 +96,17 @@ export default function VisitasPage() {
   const updateFromDrawer = () => { closeDetail(); setFilters({ ...filters }); };
 
   return (
-    <div className="shell">
-      <Sidebar />
+    <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={() => setMobileOpen(false)}
+      />
+
       <main className="main">
-        <Topbar />
+        <Topbar
+          onToggleCollapse={() => setCollapsed(v => !v)}
+          onToggleMobile={() => setMobileOpen(v => !v)}
+        />
 
         <div className="page">
           <div className="page-header">
