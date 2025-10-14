@@ -19,11 +19,11 @@ export async function listUsuarios(req, res) {
   }
   if (rol_id) {
     params.push(rol_id);
-    where.push(`u.rol_id = $${params.length}`);
+    where.push(`u.rol_id = $${params.length}::bigint`);
   }
   if (activo !== undefined) {
     params.push(activo === 'true');
-    where.push(`u.activo = $${params.length}`);
+    where.push(`u.activo = $${params.length}::boolean`);
   }
 
   const sql = `
@@ -60,81 +60,97 @@ export async function createUsuario(req, res) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
-  // si manda supervisor_id, debe ser rol supervisor
+  // validar supervisor si viene
   if (supervisor_id) {
     const sup = await query(`
-      SELECT 1 FROM usuarios u JOIN roles r ON r.id=u.rol_id
-      WHERE u.id=$1 AND r.nombre='supervisor'
+      SELECT 1
+      FROM usuarios u JOIN roles r ON r.id=u.rol_id
+      WHERE u.id=$1::bigint AND r.nombre='supervisor'
     `, [supervisor_id]);
     if (!sup.rowCount) return res.status(400).json({ error: 'supervisor_id no es un supervisor válido' });
   }
 
   const passHash = await bcrypt.hash(password, 10);
 
-  // creamos usuario
+  // crear usuario
   const ins = await query(`
-    INSERT INTO usuarios (nombre_completo, correo, telefono, rol_id, supervisor_id, password_hash, creado_por)
-    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    INSERT INTO usuarios
+      (nombre_completo, correo, telefono, rol_id, supervisor_id, password_hash, creado_por)
+    VALUES
+      ($1::text, $2::text, $3::text, $4::bigint, $5::bigint, $6::text, $7::bigint)
     RETURNING id, nombre_completo, correo, rol_id
-  `, [nombre_completo, correo, telefono || null, rol_id, supervisor_id || null, passHash, req.user?.id || null]);
+  `, [
+    nombre_completo,
+    correo,
+    telefono || null,
+    rol_id,
+    supervisor_id || null,
+    passHash,
+    req.user?.id ?? null,
+  ]);
 
   const user = ins.rows[0];
 
-  // si es técnico, creamos fila espejo en "tecnicos" (id autogenerado como código simple)
-  const rol = await query('SELECT nombre FROM roles WHERE id=$1', [rol_id]);
+  // si es técnico, crear fila espejo en "tecnicos"
+  const rol = await query('SELECT nombre FROM roles WHERE id=$1::bigint', [rol_id]);
   if (rol.rows[0]?.nombre === 'tecnico') {
     await query(`
       INSERT INTO tecnicos (usuario_id, codigo, activo)
-      VALUES ($1, CONCAT('TEC-', $1), TRUE)
+      VALUES ($1::bigint, CONCAT('TEC-', $2::text), TRUE)
       ON CONFLICT (usuario_id) DO NOTHING
-    `, [user.id]);
+    `, [user.id, String(user.id)]);
   }
 
   res.status(201).json(user);
 }
 
 // ---- PATCH /usuarios/:id
-// body (todos opcionales): { nombre_completo, telefono, rol_id, supervisor_id, activo }
+// body (opcionales): { nombre_completo, telefono, rol_id, supervisor_id, activo }
 export async function updateUsuarioBasic(req, res) {
   const { id } = req.params;
   const { nombre_completo, telefono, rol_id, supervisor_id, activo } = req.body;
 
-  // si cambia supervisor, valida que sea rol supervisor
   if (supervisor_id) {
     const sup = await query(`
-      SELECT 1 FROM usuarios u JOIN roles r ON r.id=u.rol_id
-      WHERE u.id=$1 AND r.nombre='supervisor'
+      SELECT 1
+      FROM usuarios u JOIN roles r ON r.id=u.rol_id
+      WHERE u.id=$1::bigint AND r.nombre='supervisor'
     `, [supervisor_id]);
     if (!sup.rowCount) return res.status(400).json({ error: 'supervisor_id no es un supervisor válido' });
   }
 
-  // actualizar datos básicos
   const { rows } = await query(`
     UPDATE usuarios
-    SET nombre_completo = COALESCE($1, nombre_completo),
-        telefono       = COALESCE($2, telefono),
-        rol_id         = COALESCE($3, rol_id),
-        supervisor_id  = COALESCE($4, supervisor_id),
-        activo         = COALESCE($5, activo)
-    WHERE id = $6
-    RETURNING id, rol_id
-  `, [nombre_completo || null, telefono || null, rol_id || null, supervisor_id || null, activo ?? null, id]);
+       SET nombre_completo = COALESCE($1::text, nombre_completo),
+           telefono       = COALESCE($2::text, telefono),
+           rol_id         = COALESCE($3::bigint, rol_id),
+           supervisor_id  = COALESCE($4::bigint, supervisor_id),
+           activo         = COALESCE($5::boolean, activo)
+     WHERE id = $6::bigint
+     RETURNING id, rol_id
+  `, [
+    nombre_completo ?? null,
+    telefono ?? null,
+    rol_id ?? null,
+    supervisor_id ?? null,
+    (activo === undefined ? null : !!activo),
+    id,
+  ]);
 
   if (!rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   // mantener tabla tecnicos sincronizada si cambia el rol
   if (rol_id) {
-    const rol = await query('SELECT nombre FROM roles WHERE id=$1', [rol_id]);
-    const esTec = rol.rows[0]?.nombre === 'tecnico';
+    const r = await query('SELECT nombre FROM roles WHERE id=$1::bigint', [rol_id]);
+    const esTec = r.rows[0]?.nombre === 'tecnico';
     if (esTec) {
       await query(`
         INSERT INTO tecnicos (usuario_id, codigo, activo)
-        VALUES ($1, CONCAT('TEC-', $1), TRUE)
+        VALUES ($1::bigint, CONCAT('TEC-', $2::text), TRUE)
         ON CONFLICT (usuario_id) DO NOTHING
-      `, [id]);
+      `, [id, String(id)]);
     } else {
-      // si deja de ser técnico, desactiva registro
-      await query('UPDATE tecnicos SET activo=FALSE WHERE usuario_id=$1', [id]);
+      await query('UPDATE tecnicos SET activo=FALSE WHERE usuario_id=$1::bigint', [id]);
     }
   }
 
@@ -149,9 +165,12 @@ export async function updateUsuarioPassword(req, res) {
 
   const passHash = await bcrypt.hash(password, 10);
   const { rowCount } = await query(`
-    UPDATE usuarios SET password_hash=$1, must_change_password=FALSE WHERE id=$2
+    UPDATE usuarios
+       SET password_hash=$1::text, must_change_password=FALSE
+     WHERE id=$2::bigint
   `, [passHash, id]);
-  if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
 
+  if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
   res.json({ ok: true });
 }
+
