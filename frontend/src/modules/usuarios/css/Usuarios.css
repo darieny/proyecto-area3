@@ -1,81 +1,122 @@
-.card { 
-    background: var(--card); 
-    border: 1px solid var(--border); 
-    border-radius: 12px; padding: 16px; 
+/* ===== Card / layout ===== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
 }
-.tbl { 
-    width: 100%; 
-    border-collapse: collapse; 
+
+.row { display: flex; align-items: center; gap: 12px; }
+.between { justify-content: space-between; }
+.end { justify-content: flex-end; }
+
+/* header dentro de la card */
+.card h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.card .actions { display:flex; gap:8px; }
+
+/* ===== Tabla ===== */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+.tbl th {
+  font-size: 13px; font-weight: 600; color: #616a77; letter-spacing: .02em;
+  text-transform: none;
 }
-.tbl th, .tbl td { 
-    padding: 10px; 
-    border-bottom: 1px solid var(--border); 
-    text-align: left; 
+.tbl tbody tr:hover { background: rgba(0,0,0,.03); } /* hover sutil */
+.tbl td:last-child, .tbl th:last-child { width: 1%; white-space: nowrap; } /* col de acciones si la agregas luego */
+
+/* ===== Chips ===== */
+.chip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding: 2px 8px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--border); color:#0f172a; background: #f6f7f9;
 }
-.row { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
+.chip.ok { background: #e6ffed; border-color: #b7f0c3; }
+.chip.off { background: #ffecec; border-color: #f5b5b5; }
+
+/* ===== Botones ===== */
+.btn {
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--card);
+  cursor: pointer; transition: transform .02s ease, background .2s ease, opacity .2s;
 }
-.between { 
-    justify-content: space-between; 
+.btn:hover { background: rgba(0,0,0,.03); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+.btn.primary { background: var(--primary); color: #fff; border: 0; }
+.btn.primary:hover { filter: brightness(0.98); }
+.btn.ghost { background: transparent; border: 1px solid var(--border); }
+
+/* ===== Inputs (form + modal) ===== */
+.form label { display: grid; gap: 6px; margin: 10px 0; font-size: 13px; }
+input, select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  outline: none;
 }
-.end { 
-    justify-content: flex-end; 
+input:focus, select:focus {
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
 }
-.btn { 
-    padding: 8px 12px; 
-    border-radius: 8px; 
-    border: 1px solid var(--border); 
-    background: var(--card); 
-    cursor: pointer; 
+
+/* ===== Estados de texto ===== */
+.error { color: #c0392b; margin: 8px 0; background:#fdeaea; border:1px solid #f6c8c8; padding:8px 10px; border-radius:8px; }
+.muted { opacity: .7; }
+
+/* ===== Modal ===== */
+.modal__backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  display: grid; place-items: center; z-index: 1000;
 }
-.btn.primary { 
-    background: var(--primary); 
-    color: #fff; border: 0; 
+.modal {
+  background: var(--card); border-radius: 12px; width: 480px; max-width: 94vw;
+  border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(15,23,42,.12);
+  animation: pop .12s ease-out;
 }
-.chip { 
-    padding: 2px 8px; 
-    border-radius: 999px; 
-    font-size: 12px; 
-    border: 1px solid var(--border); 
+@keyframes pop { from { transform: scale(.98); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+
+.modal h3 {
+  margin: 0; padding: 14px 18px; border-bottom: 1px solid var(--border);
+  font-size: 16px; font-weight: 700;
 }
-.chip.ok { 
-    background: #e6ffed; 
-    border-color: #b7f0c3; 
+.modal .form { padding: 14px 18px; }
+.modal .row.end { padding-top: 6px; }
+
+/* ===== Responsive ===== */
+
+/* 1) Permitir scroll horizontal de la tabla en pantallas estrechas */
+.card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+
+@media (max-width: 960px) {
+  .tbl th, .tbl td { padding: 8px 10px; font-size: 14px; }
+  .card { padding: 12px; }
 }
-.chip.off { 
-    background: #ffecec; 
-    border-color: #f5b5b5; 
+
+/* 3) Móviles: compactar y ocultar columnas menos críticas */
+@media (max-width: 640px) {
+  /* Oculta: ID (col 1) y Teléfono (col 4) */
+  .tbl th:nth-child(1), .tbl td:nth-child(1),
+  .tbl th:nth-child(4), .tbl td:nth-child(4) { display: none; }
+
+  .tbl th, .tbl td { padding: 8px 10px; font-size: 13px; }
+  .chip { font-size: 11px; padding: 2px 6px; }
+  
+  /* header de la card: botón a la derecha pero con menos espacio */
+  .card h2 { font-size: 18px; }
+  .btn { padding: 8px 10px; }
 }
-.modal__backdrop { 
-    position: fixed; 
-    inset: 0; 
-    background: rgba(0,0,0,.35); 
-    display: grid; 
-    place-items: center; 
-}
-.modal { 
-    background: var(--card); 
-    border-radius: 12px; 
-    padding: 18px; 
-    width: 420px; 
-    max-width: 94vw; 
-}
-.form label { 
-    display: grid; 
-    gap: 6px; margin: 10px 0; 
-}
-input, select { 
-    padding: 10px; 
-    border-radius: 8px; 
-    border: 1px solid var(--border); 
-    background: var(--bg); 
-}
-.error { 
-    color: #c0392b; 
-    margin: 8px 0; 
-}
-.muted { 
-    opacity: .7; 
+
+/* 4) Modal y formularios en móvil */
+@media (max-width: 520px) {
+  .modal { width: 96vw; border-radius: 10px; }
+  .modal h3 { padding: 12px 14px; font-size: 15px; }
+  .modal .form { padding: 12px 14px; }
+  .form label { margin: 8px 0; }
+
+  /* botones del modal a ancho completo */
+  .row.end { gap: 8px; }
+  .row.end .btn { flex: 1; }
 }

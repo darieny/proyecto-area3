@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+// src/modules/usuarios/pages/UsuariosPage.jsx
+import { useMemo, useState } from "react";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { useUsuarios } from "../hooks/useUsuarios.js";
@@ -8,10 +9,13 @@ export default function UsuariosPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const { items, roles, loading, err, create, update } = useUsuarios();
+  const { items, roles, loading, err, create } = useUsuarios();
 
-  // modal state
+  // ===== Modal Crear =====
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
   const [form, setForm] = useState({
     nombre_completo: "",
     correo: "",
@@ -33,6 +37,7 @@ export default function UsuariosPage() {
       rol_id: roleOptions[0]?.value || "",
       password: "",
     });
+    setFormError("");
     setOpen(true);
   }
   function onChange(e) {
@@ -41,27 +46,34 @@ export default function UsuariosPage() {
 
   async function onSubmit(e) {
     e.preventDefault();
+    setFormError("");
+
+    // Validaciones rápidas
+    if (!form.nombre_completo.trim()) return setFormError("El nombre es requerido");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) return setFormError("Correo inválido");
+    if (!form.rol_id) return setFormError("Selecciona un rol");
+    if (!form.password || form.password.length < 6) return setFormError("La contraseña debe tener al menos 6 caracteres");
+
     try {
+      setSaving(true);
       await create({
-        nombre_completo: form.nombre_completo,
-        correo: form.correo,
-        telefono: form.telefono || null,
+        nombre_completo: form.nombre_completo.trim(),
+        correo: form.correo.trim(),
+        telefono: form.telefono.trim() || null,
         rol_id: Number(form.rol_id),
         password: form.password,
       });
       setOpen(false);
     } catch (e) {
       const msg = e?.response?.data?.error || e.message;
-      alert(msg);
+      setFormError(msg);
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
-    <div
-      className={`shell ${collapsed ? "is-collapsed" : ""} ${
-        mobileOpen ? "menu-open" : ""
-      }`}
-    >
+    <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
       <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
       <div className="main">
         <Topbar
@@ -73,9 +85,7 @@ export default function UsuariosPage() {
         <div className="card">
           <div className="row between">
             <h2>Usuarios</h2>
-            <button className="btn primary" onClick={onNew}>
-              Nuevo
-            </button>
+            <button className="btn primary" onClick={onNew}>+ Crear</button>
           </div>
 
           {loading && <div className="muted">Cargando…</div>}
@@ -113,10 +123,11 @@ export default function UsuariosPage() {
           )}
         </div>
 
+        {/* ===== Modal Crear Usuario ===== */}
         {open && (
           <div className="modal__backdrop" onClick={() => setOpen(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
-              <h3>Nuevo usuario</h3>
+              <h3>Crear usuario</h3>
               <form onSubmit={onSubmit} className="form">
                 <label>
                   Nombre completo
@@ -153,13 +164,9 @@ export default function UsuariosPage() {
                     onChange={onChange}
                     required
                   >
-                    <option value="" disabled>
-                      Selecciona un rol…
-                    </option>
+                    <option value="" disabled>Selecciona un rol…</option>
                     {roleOptions.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
+                      <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
                 </label>
@@ -174,16 +181,19 @@ export default function UsuariosPage() {
                   />
                 </label>
 
+                {formError && <div className="error">{formError}</div>}
+
                 <div className="row end gap">
                   <button
                     type="button"
                     className="btn"
                     onClick={() => setOpen(false)}
+                    disabled={saving}
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="btn primary">
-                    Guardar
+                  <button type="submit" className="btn primary" disabled={saving}>
+                    {saving ? "Guardando…" : "Guardar"}
                   </button>
                 </div>
               </form>
@@ -194,3 +204,4 @@ export default function UsuariosPage() {
     </div>
   );
 }
+
