@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
 
-// ---- GET /roles
+// ---- GET /usuarios/roles
 export async function listRoles(_req, res) {
   const { rows } = await query('SELECT id, nombre FROM roles ORDER BY id;');
   res.json(rows);
@@ -72,36 +72,45 @@ export async function createUsuario(req, res) {
 
   const passHash = await bcrypt.hash(password, 10);
 
-  // crear usuario
-  const ins = await query(`
-    INSERT INTO usuarios
-      (nombre_completo, correo, telefono, rol_id, supervisor_id, password_hash, creado_por)
-    VALUES
-      ($1::text, $2::text, $3::text, $4::bigint, $5::bigint, $6::text, $7::bigint)
-    RETURNING id, nombre_completo, correo, rol_id
-  `, [
-    nombre_completo,
-    correo,
-    telefono || null,
-    rol_id,
-    supervisor_id || null,
-    passHash,
-    req.user?.id ?? null,
-  ]);
+  try {
+    // crear usuario
+    const ins = await query(`
+      INSERT INTO usuarios
+        (nombre_completo, correo, telefono, rol_id, supervisor_id, password_hash, creado_por)
+      VALUES
+        ($1::text, $2::text, $3::text, $4::bigint, $5::bigint, $6::text, $7::bigint)
+      RETURNING id, nombre_completo, correo, rol_id
+    `, [
+      nombre_completo,
+      correo,
+      telefono || null,
+      rol_id,
+      supervisor_id || null,
+      passHash,
+      req.user?.id ?? null,
+    ]);
 
-  const user = ins.rows[0];
+    const user = ins.rows[0];
 
-  // si es técnico, crear fila espejo en "tecnicos"
-  const rol = await query('SELECT nombre FROM roles WHERE id=$1::bigint', [rol_id]);
-  if (rol.rows[0]?.nombre === 'tecnico') {
-    await query(`
-      INSERT INTO tecnicos (usuario_id, codigo, activo)
-      VALUES ($1::bigint, CONCAT('TEC-', $2::text), TRUE)
-      ON CONFLICT (usuario_id) DO NOTHING
-    `, [user.id, String(user.id)]);
+    // si es técnico, crear/activar fila espejo en "tecnicos"
+    const rol = await query('SELECT nombre FROM roles WHERE id=$1::bigint', [rol_id]);
+    if (rol.rows[0]?.nombre === 'tecnico') {
+      await query(`
+        INSERT INTO tecnicos (usuario_id, codigo, activo)
+        VALUES ($1::bigint, CONCAT('TEC-', $2::text), TRUE)
+        ON CONFLICT (usuario_id)
+        DO UPDATE SET activo = TRUE, codigo = EXCLUDED.codigo
+      `, [user.id, String(user.id)]);
+    }
+
+    res.status(201).json(user);
+  } catch (e) {
+    // correo UNIQUE
+    if (e?.code === '23505' && e?.constraint === 'usuarios_correo_key') {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
+    }
+    throw e;
   }
-
-  res.status(201).json(user);
 }
 
 // ---- PATCH /usuarios/:id
@@ -147,7 +156,8 @@ export async function updateUsuarioBasic(req, res) {
       await query(`
         INSERT INTO tecnicos (usuario_id, codigo, activo)
         VALUES ($1::bigint, CONCAT('TEC-', $2::text), TRUE)
-        ON CONFLICT (usuario_id) DO NOTHING
+        ON CONFLICT (usuario_id)
+        DO UPDATE SET activo = TRUE, codigo = EXCLUDED.codigo
       `, [id, String(id)]);
     } else {
       await query('UPDATE tecnicos SET activo=FALSE WHERE usuario_id=$1::bigint', [id]);
@@ -196,7 +206,6 @@ export async function getUsuarioById(req, res) {
 export async function deleteUsuario(req, res) {
   const { id } = req.params;
 
-  // desactivar usuario
   const { rowCount } = await query(`
     UPDATE usuarios
        SET activo = FALSE
@@ -205,8 +214,8 @@ export async function deleteUsuario(req, res) {
 
   if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-  // si era técnico, desactivar también su registro espejo
   await query(`UPDATE tecnicos SET activo = FALSE WHERE usuario_id = $1::bigint`, [id]);
 
   res.json({ ok: true });
 }
+
