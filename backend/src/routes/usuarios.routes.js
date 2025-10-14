@@ -11,4 +11,7 @@ r.get('/tecnicos', u.listTecnicos);               // llenar <select> de visitas
 r.post('/', u.createUsuario);                     // crear usuario (admin/sup/tecnico)
 r.patch('/:id', u.updateUsuarioBasic);            // actualizar datos/rol/activo/supervisor
 r.patch('/:id/password', u.updateUsuarioPassword);// cambiar contraseña (admin)
+r.get('/:id', u.getUsuarioById);    // perfil/detalle
+r.delete('/:id', u.deleteUsuario);  // soft delete (activo=false)
+
 export default r;

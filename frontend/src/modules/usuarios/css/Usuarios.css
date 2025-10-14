@@ -15,14 +15,19 @@
 .card .actions { display:flex; gap:8px; }
 
 /* ===== Tabla ===== */
+.table-wrap {
+  overflow-x: auto;              /* << scroll solo para la tabla */
+  -webkit-overflow-scrolling: touch;
+}
 .tbl { width: 100%; border-collapse: collapse; }
 .tbl th, .tbl td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
 .tbl th {
   font-size: 13px; font-weight: 600; color: #616a77; letter-spacing: .02em;
   text-transform: none;
 }
-.tbl tbody tr:hover { background: rgba(0,0,0,.03); } /* hover sutil */
-.tbl td:last-child, .tbl th:last-child { width: 1%; white-space: nowrap; } /* col de acciones si la agregas luego */
+.tbl tbody tr:hover { background: rgba(0,0,0,.03); }
+.tbl td:last-child, .tbl th:last-child { width: 1%; white-space: nowrap; } /* col de acciones */
+.tright { text-align: right; }
 
 /* ===== Chips ===== */
 .chip {
@@ -43,9 +48,12 @@
 .btn:active { transform: translateY(1px); }
 .btn[disabled] { opacity: .6; cursor: not-allowed; }
 
-.btn.primary { background: var(--primary); color: #4f46e5; border: 0; }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.btn.primary { background: var(--primary); color: #fff; border: 0; }
 .btn.primary:hover { filter: brightness(0.98); }
 .btn.ghost { background: transparent; border: 1px solid var(--border); }
+.btn.danger { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
+.btn.danger:hover { background: #fecaca; }
 
 /* ===== Inputs (form + modal) ===== */
 .form label { display: grid; gap: 6px; margin: 10px 0; font-size: 13px; }
@@ -85,38 +93,29 @@ input:focus, select:focus {
 .modal .row.end { padding-top: 6px; }
 
 /* ===== Responsive ===== */
-
-/* 1) Permitir scroll horizontal de la tabla en pantallas estrechas */
-.card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-
 @media (max-width: 960px) {
   .tbl th, .tbl td { padding: 8px 10px; font-size: 14px; }
   .card { padding: 12px; }
 }
 
-/* 3) Móviles: compactar y ocultar columnas menos críticas */
 @media (max-width: 640px) {
-  /* Oculta: ID (col 1) y Teléfono (col 4) */
+  /* Oculta: ID (1) y Teléfono (4) */
   .tbl th:nth-child(1), .tbl td:nth-child(1),
   .tbl th:nth-child(4), .tbl td:nth-child(4) { display: none; }
 
   .tbl th, .tbl td { padding: 8px 10px; font-size: 13px; }
   .chip { font-size: 11px; padding: 2px 6px; }
-  
-  /* header de la card: botón a la derecha pero con menos espacio */
+
   .card h2 { font-size: 18px; }
   .btn { padding: 8px 10px; }
 }
 
-/* 4) Modal y formularios en móvil */
 @media (max-width: 520px) {
   .modal { width: 96vw; border-radius: 10px; }
   .modal h3 { padding: 12px 14px; font-size: 15px; }
   .modal .form { padding: 12px 14px; }
   .form label { margin: 8px 0; }
-
-  /* botones del modal a ancho completo */
   .row.end { gap: 8px; }
-  .row.end .btn { flex: 1; }
+  .row.end .btn { flex: 1; }          /* botones del modal a ancho completo */
 }
+

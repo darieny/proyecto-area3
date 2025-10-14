@@ -174,3 +174,39 @@ export async function updateUsuarioPassword(req, res) {
   res.json({ ok: true });
 }
 
+// ---- GET /usuarios/:id
+export async function getUsuarioById(req, res) {
+  const { id } = req.params;
+  const { rows } = await query(`
+    SELECT
+      u.id, u.nombre_completo, u.correo, u.telefono, u.activo,
+      u.rol_id, r.nombre AS rol,
+      u.supervisor_id, sup.nombre_completo AS supervisor_nombre
+    FROM usuarios u
+    JOIN roles r ON r.id = u.rol_id
+    LEFT JOIN usuarios sup ON sup.id = u.supervisor_id
+    WHERE u.id = $1::bigint
+  `, [id]);
+
+  if (!rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json(rows[0]);
+}
+
+// ---- DELETE /usuarios/:id (soft delete)
+export async function deleteUsuario(req, res) {
+  const { id } = req.params;
+
+  // desactivar usuario
+  const { rowCount } = await query(`
+    UPDATE usuarios
+       SET activo = FALSE
+     WHERE id = $1::bigint
+  `, [id]);
+
+  if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  // si era técnico, desactivar también su registro espejo
+  await query(`UPDATE tecnicos SET activo = FALSE WHERE usuario_id = $1::bigint`, [id]);
+
+  res.json({ ok: true });
+}
