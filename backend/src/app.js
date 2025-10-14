@@ -9,6 +9,7 @@ import dashboardRoutes from './routes/dashboard.routes.js';
 import clientesRoutes from './routes/clientes.routes.js';
 import ubicacionesRoutes from './routes/ubicaciones.routes.js';
 import visitasRoutes from './routes/visitas.routes.js';
+import usuariosRoutes from './routes/usuarios.routes.js';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/ubicaciones', ubicacionesRoutes);
 app.use('/api/visitas', visitasRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
 export default app;
 
