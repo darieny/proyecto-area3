@@ -1,4 +1,3 @@
-// src/modules/usuarios/pages/UsuariosPage.jsx
 import { useMemo, useState } from "react";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
