@@ -6,6 +6,7 @@ import RequireRole from './router/RequireRole';
 import Clientes from './modules/clientes/pages/Clientes';
 import ClienteDetail from './modules/clientes/pages/ClientesDetail';
 import VisitasPage from './modules/visitas/pages/VisitasPage';
+import UsuariosPage from './modules/usuarios/pages/UsuariosPage';
 
 // Páginas base
 import Login from './pages/Login';
@@ -70,6 +71,13 @@ export default function App() {
             element={
               <RequireRole role="admin">
                 <VisitasPage />
+              </RequireRole>
+            } 
+            />
+            <Route path="/usuarios" 
+            element={
+              <RequireRole role="admin">
+                <UsuariosPage />
               </RequireRole>
             } 
             />

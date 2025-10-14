@@ -1,3 +1,4 @@
+// src/modules/visitas/pages/VisitasPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -9,6 +10,8 @@ import VisitasKpis from "../components/VisitasKpis.jsx";
 import VisitasTable from "../components/VisitasTable.jsx";
 import VisitaDetailDrawer from "../components/VisitaDetailDrawer.jsx";
 import { useVisitas } from "../hooks/useVisitas.js";
+import { useTecnicos } from "../hooks/useTecnicos.js";
+import { api } from "../../../services/http.js";
 import "../css/visitas.css";
 
 function parseQS(sp) {
@@ -35,13 +38,61 @@ function buildQS(filters) {
   return usp;
 }
 
+/* ---------- Modal interno para asignar técnico ---------- */
+function AsignarTecnicoModal({ open, visita, onClose, onSaved }) {
+  const tecnicos = useTecnicos();
+  const [tecnicoId, setTecnicoId] = useState("");
+
+  useEffect(() => {
+    if (visita) setTecnicoId(visita.tecnico_asignado_id ?? "");
+  }, [visita]);
+
+  if (!open || !visita) return null;
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    await api.patch(`/visitas/${visita.id}/tecnico`, {
+      tecnico_id: Number(tecnicoId),
+    });
+    onSaved?.();
+    onClose?.();
+  }
+
+  return (
+    <div className="modal__backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Asignar técnico</h3>
+        <form onSubmit={onSubmit} className="form">
+          <label>Técnico
+            <select
+              value={tecnicoId || ""}
+              onChange={(e) => setTecnicoId(e.target.value)}
+              required
+            >
+              <option value="" disabled>Selecciona…</option>
+              {tecnicos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre_completo}</option>
+              ))}
+            </select>
+          </label>
+          <div className="row end gap">
+            <button type="button" className="btn" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+/* -----------------VISITAS----------------------------- */
+
 export default function VisitasPage() {
   const [collapsed, setCollapsed] = useState(false);   // desktop
   const [mobileOpen, setMobileOpen] = useState(false); // cel
   const [sp, setSp] = useSearchParams();
-  const initialFromQS = useMemo(() => parseQS(sp), []); // hidrata una vez
+  const initialFromQS = useMemo(() => parseQS(sp), []);
 
-  const { items, meta, loading, filters, setFilters } = useVisitas({
+  const { items, meta, loading, filters, setFilters, reload } = useVisitas({
     pageSize: 10,
     ...initialFromQS,
   });
@@ -95,6 +146,13 @@ export default function VisitasPage() {
   const closeDetail = () => { setSelected(null); setDrawerOpen(false); };
   const updateFromDrawer = () => { closeDetail(); setFilters({ ...filters }); };
 
+  // Modal "Asignar técnico"
+  const [asignarOpen, setAsignarOpen] = useState(false);
+  const [visitaAsignar, setVisitaAsignar] = useState(null);
+  const openAsignar = (v) => { setVisitaAsignar(v); setAsignarOpen(true); };
+  const closeAsignar = () => { setVisitaAsignar(null); setAsignarOpen(false); };
+  const onAsignado = async () => { closeAsignar(); await reload?.(); };
+
   return (
     <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
       <Sidebar
@@ -123,6 +181,7 @@ export default function VisitasPage() {
             loading={loading}
             onOpenDetail={openDetail}
             onPageChange={(p) => setFilters({ ...filters, page: p })}
+            onAssignTecnico={openAsignar}
           />
 
           <VisitaDetailDrawer
@@ -131,9 +190,18 @@ export default function VisitasPage() {
             visita={selected}
             onUpdated={updateFromDrawer}
           />
+
+          {/* Modal asignar técnico */}
+          <AsignarTecnicoModal
+            open={asignarOpen}
+            visita={visitaAsignar}
+            onClose={closeAsignar}
+            onSaved={onAsignado}
+          />
         </div>
       </main>
     </div>
   );
 }
+
 
