@@ -55,7 +55,7 @@ export function useVisitas(initial = {}) {
     setFilters((f) => ({ ...f })); 
   }, []);
 
-  return { items, meta, loading, error, filters, setFilters: updateFilters };
+  return { items, meta, loading, error, filters, setFilters: updateFilters, assignTecnico };
 }
 
 

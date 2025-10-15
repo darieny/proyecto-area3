@@ -1,4 +1,3 @@
-// src/services/visitas.api.js
 import { api } from "./http.js";
 
 /* =======================
