@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { visitasApi } from "../../../services/visitas.api.js";
 
 export function useVisitas(initial = {}) {
