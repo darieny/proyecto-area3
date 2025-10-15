@@ -30,7 +30,5 @@ r.post('/:id/evidencias', ctrl.postEvidencia);
 // Logs
 r.get('/:id/logs', ctrl.getLogs);
 
-//Asignar tecnico
-r.patch('/:id/tecnico', v.assignTecnico); 
 
 export default r;
