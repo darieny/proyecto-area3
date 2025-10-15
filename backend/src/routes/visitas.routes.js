@@ -30,5 +30,6 @@ r.post('/:id/evidencias', ctrl.postEvidencia);
 // Logs
 r.get('/:id/logs', ctrl.getLogs);
 
+r.patch('/:id/tecnico', ctrl.assignTecnico);
 
 export default r;
