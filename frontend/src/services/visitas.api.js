@@ -22,9 +22,15 @@ function toISODateOrEmpty(v, endOfDay = false) {
 
 // Mapeo flexible para estado (acepta id o texto)
 const STATUS_MAP = {
-  "1": 1, "2": 2, "3": 3, "4": 4, "5": 5,
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
   programada: 1,
-  "en_progreso": 2, "en-progreso": 2, "en progreso": 2,
+  "en_progreso": 2,
+  "en-progreso": 2,
+  "en progreso": 2,
   completada: 3,
   cancelada: 4,
   pendiente: 5,
@@ -50,16 +56,16 @@ const mapCreate = (data) => {
   return {
     titulo: data.titulo || "Visita programada",
     descripcion: data.observaciones ?? "",
-    creado_por_id: data.creadoPorId,         
+    creado_por_id: data.creadoPorId,
     ubicacion_id: data.ubicacionId ?? null,
-    status_id: 1,                            
+    status_id: 1,
     programada_inicio: data.programadaInicio ?? start,
     programada_fin: data.programadaFin ?? end,
   };
 };
 
 /* =======================
-   API
+   API PRINCIPAL
 ======================= */
 export const visitasApi = {
   // Lista con filtros del UI
@@ -72,14 +78,14 @@ export const visitasApi = {
     // cliente
     if (raw.cliente_id) params.cliente_id = raw.cliente_id;
 
-    // estado (acepta id o nombre; nunca mandamos NaN)
+    // estado (acepta id o nombre)
     if (raw.estado !== undefined && raw.estado !== "") {
       const key = String(raw.estado).toLowerCase();
       const sid = STATUS_MAP[key];
       if (sid) params.status_id = sid;
     }
 
-    // prioridad / tipo (solo si tienes IDs mapeados)
+    // prioridad / tipo
     if (raw.prioridad) {
       const pid = PRIORITY_MAP[String(raw.prioridad).toLowerCase()];
       if (pid) params.priority_id = pid;
@@ -103,11 +109,13 @@ export const visitasApi = {
     return data; // { items, meta }
   },
 
+  // Obtener detalle por ID
   async getById(id) {
     const { data } = await api.get(`/visitas/${id}`);
     return data;
   },
 
+  // Crear visita (desde cliente)
   async create(payload) {
     if (!payload.clienteId) {
       throw new Error("clienteId es requerido para crear una visita");
@@ -117,12 +125,13 @@ export const visitasApi = {
     return data;
   },
 
+  // Actualizar campos genéricos
   async patch(id, changes) {
     const { data } = await api.patch(`/visitas/${id}`, changes);
     return data;
   },
 
-
+  // Cambiar estado de la visita
   async patchEstado(id, estadoId, opts = {}) {
     const { autorId, nota } = opts || {};
     let body;
@@ -130,14 +139,21 @@ export const visitasApi = {
       body = { estado_nuevo_id: Number(estadoId), autor_id: autorId };
       if (nota) body.nota = nota;
     } else {
-      // fallback legacy 
+      // fallback legacy
       body = { status_id: Number(estadoId) };
     }
     const { data } = await api.patch(`/visitas/${id}/estado`, body);
     return data;
   },
 
-  // Upload de evidencia
+  // Asignar o desasignar técnico
+  async assignTecnico(id, tecnicoIdOrNull) {
+    const body = { tecnico_id: tecnicoIdOrNull ?? null };
+    const { data } = await api.patch(`/visitas/${id}/tecnico`, body);
+    return data;
+  },
+
+  // Subir evidencia (foto o archivo)
   async uploadFile(file) {
     const form = new FormData();
     form.append("file", file);
@@ -147,7 +163,7 @@ export const visitasApi = {
     return data; // { id, url, ... }
   },
 
-  // Últimas por cliente (widget)
+  // Últimas visitas de un cliente
   async listByCliente(clienteId, params = {}) {
     const { data } = await api.get("/visitas", {
       params: { cliente_id: clienteId, limit: params.limit ?? 5 },

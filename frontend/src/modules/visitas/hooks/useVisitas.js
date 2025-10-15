@@ -1,4 +1,3 @@
-// src/modules/visitas/hooks/useVisitas.js
 import { useEffect, useState } from "react";
 import { visitasApi } from "../../../services/visitas.api.js";
 
@@ -50,6 +49,11 @@ export function useVisitas(initial = {}) {
     })();
     return () => { alive = false; };
   }, [filters]);
+
+  const assignTecnico = useCallback(async (visitaId, tecnicoIdOrNull) => {
+    await visitasApi.assignTecnico(visitaId, tecnicoIdOrNull);
+    setFilters((f) => ({ ...f })); 
+  }, []);
 
   return { items, meta, loading, error, filters, setFilters: updateFilters };
 }
