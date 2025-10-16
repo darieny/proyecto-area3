@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useVisitaForm } from "../hooks/useVisitaForm.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
+import { useTecnicos } from "../../visitas/hooks/useTecnicos.js";
 
 export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}, onSaved }) {
   const { user } = useAuth();
   const { createVisita, saving, error } = useVisitaForm();
+  const tecnicos = useTecnicos();
 
   const [form, setForm] = useState({
     clienteId: clienteId || "",
@@ -15,11 +17,11 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
     tipo: "mantenimiento",
     prioridad: "normal",
     observaciones: "",
-    files: [],               // FileList (si luego subes evidencias)
+    files: [],
     creadoPorId: user?.id ?? null,
+    tecnicoId: "",                
   });
 
-  // Sincroniza props externas cuando cambian
   useEffect(() => {
     setForm((f) => ({
       ...f,
@@ -41,7 +43,6 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
     const { name, value } = e.target;
     setForm((f) => {
       const next = { ...f, [name]: value };
-      // Autollenar título si aún no hay uno cuando cambian el tipo
       if (name === "tipo" && !f.titulo) {
         next.titulo = value.charAt(0).toUpperCase() + value.slice(1);
       }
@@ -56,7 +57,10 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const visita = await createVisita(form);
+      const visita = await createVisita({
+        ...form,
+        tecnicoId: form.tecnicoId ? Number(form.tecnicoId) : null,
+      });
       onSaved?.(visita);
       onClose?.();
     } catch (e) {
@@ -75,7 +79,6 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
         </div>
 
         <form className="modal-body visitas-form" onSubmit={handleSubmit}>
-
           {/* Título */}
           <label className="form-label">Título</label>
           <input
@@ -127,6 +130,22 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
             </div>
           </div>
 
+          {/* Técnico (opcional) */}
+          <div>
+            <label className="form-label">Técnico (opcional)</label>
+            <select
+              className="input"
+              name="tecnicoId"
+              value={form.tecnicoId}
+              onChange={handleChange}
+            >
+              <option value="">— Sin asignar —</option>
+              {tecnicos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre_completo}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Evidencias (futuro) */}
           <div>
             <label className="form-label">Adjuntar foto/evidencia</label>
@@ -167,4 +186,5 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
     document.body
   );
 }
+
 

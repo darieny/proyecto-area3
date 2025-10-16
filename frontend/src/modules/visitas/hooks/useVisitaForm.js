@@ -1,3 +1,4 @@
+// src/modules/visitas/hooks/useVisitaForm.js
 import { useState } from "react";
 import { visitasApi } from "../../../services/visitas.api.js";
 
@@ -6,22 +7,28 @@ export function useVisitaForm() {
   const [error, setError] = useState("");
 
   async function createVisita(form) {
+    setError("");
     try {
       setSaving(true);
-      setError("");
-      // Si subes evidencias primero:
-      let evidencias = [];
-      if (form.files?.length) {
-        const uploads = await Promise.all([...form.files].map(f => visitasApi.uploadFile(f)));
-        evidencias = uploads.map(u => u.id);
-      }
-      const visita = await visitasApi.create({ ...form, evidencias });
+      const visita = await visitasApi.create({
+        clienteId: form.clienteId,
+        creadoPorId: form.creadoPorId,
+        titulo: form.titulo,
+        observaciones: form.observaciones,
+        ubicacionId: form.ubicacionId ?? null,
+        tecnicoId: form.tecnicoId ? Number(form.tecnicoId) : null,
+        programadaInicio: form.programadaInicio || undefined,
+        programadaFin: form.programadaFin || undefined,
+      });
       return visita;
     } catch (e) {
-      setError(e?.response?.data?.message || "No se pudo crear la visita");
+      setError(e?.response?.data?.error || e.message);
       throw e;
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return { createVisita, saving, error };
 }
+

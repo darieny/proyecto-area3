@@ -57,6 +57,7 @@ const mapCreate = (data) => {
     descripcion: data.observaciones ?? "",
     creado_por_id: data.creadoPorId,
     ubicacion_id: data.ubicacionId ?? null,
+    tecnico_asignado_id: data.tecnicoId ?? null,
     status_id: 1,
     programada_inicio: data.programadaInicio ?? start,
     programada_fin: data.programadaFin ?? end,
