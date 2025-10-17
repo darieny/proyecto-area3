@@ -3,7 +3,7 @@ import { useTecnicoVisitas } from '../hooks/useTecnicoVisitas';
 import VisitCard from '../components/VisitCard';
 import Sidebar from '../../dashboard/components/Sidebar';
 import Topbar from '../../dashboard/components/Topbar';
-import './Tecnico.css';
+import '../css/Tecnico.css';
 
 const hoy = () => new Date().toISOString().slice(0,10);
 
