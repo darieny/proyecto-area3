@@ -6,6 +6,12 @@ export const useAuth = () => useContext(AuthCtx);
 
 const TOKEN_KEY = 'auth_token';
 
+// helper opcional para normalizar el rol
+const normalizeRole = (rol) =>
+  String(rol || '')
+    .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .toLowerCase(); // "técnico" -> "tecnico"
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +24,7 @@ export function AuthProvider({ children }) {
         if (saved) {
           setAuthToken(saved);
           const { data } = await api.get('/auth/me');
+          const rol = normalizeRole(data.user?.rol);
           setUser(data.user);
         } else {
           setUser(null);
@@ -52,6 +59,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem(TOKEN_KEY);
       setAuthToken(null);
       setUser(null);
+      window.location.replace('/login');
     }
   }
 

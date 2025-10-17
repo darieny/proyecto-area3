@@ -180,4 +180,47 @@ body{ color:var(--text); background:var(--bg); }
   .dash__bottom{ grid-template-columns:1fr; }
 }
 
+/* ===== User menu (Topbar) ===== */
+.tb__user--menu { position: relative; }
+.tb__userbtn{
+  display:flex; align-items:center; gap:10px;
+  background:transparent; border:1px solid #e6e6ef;
+  padding:6px 10px; border-radius:999px; cursor:pointer;
+}
+.tb__userbtn:focus { outline:2px solid #5c6bff33; outline-offset:2px; }
+.tb__chev{ opacity:.6 }
+
+.tb__dropdown{
+  position:absolute; right:0; top:calc(100% + 8px);
+  width:240px; background:var(--card);
+  border:1px solid var(--border); border-radius:12px;
+  padding:8px; box-shadow: var(--shadow);
+  transform: translateY(-6px);
+  opacity:0; pointer-events:none;
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 50;
+}
+.tb__user--menu.is-open .tb__dropdown{
+  transform: translateY(0); opacity:1; pointer-events:auto;
+}
+
+.tb__userinfo{
+  display:flex; align-items:center; gap:10px;
+  padding:8px; border-bottom:1px dashed var(--border); margin-bottom:6px;
+}
+.tb__avatar--sm{ width:32px; height:32px; }
+.tb__meta .tb__uname{ font-weight:700; line-height:1.1; }
+.tb__meta .tb__urole{ font-size:.8rem; color:var(--muted); }
+
+.tb__menuitem{
+  width:100%; text-align:left;
+  padding:10px; border-radius:8px;
+  background:transparent; border:none; cursor:pointer;
+}
+.tb__menuitem:hover{ background:#f3f4f6; }
+
+/* En móviles no hay hover: se controla solo por click */
+@media (hover: none) {
+  .tb__user--menu { pointer-events:auto; }
+}
 
