@@ -1,4 +1,3 @@
-// src/App.js
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import RequireAuth from './router/RequireAuth';
@@ -7,6 +6,8 @@ import Clientes from './modules/clientes/pages/Clientes';
 import ClienteDetail from './modules/clientes/pages/ClientesDetail';
 import VisitasPage from './modules/visitas/pages/VisitasPage';
 import UsuariosPage from './modules/usuarios/pages/UsuariosPage';
+import TecnicoHome from './modules/tecnico/pages/TecnicoHome';
+import TecnicoDetalle from './modules/tecnico/pages/TecnicoDetalle';
 
 // Páginas base
 import Login from './pages/Login';
@@ -67,24 +68,41 @@ export default function App() {
                 </RequireRole>
               }
             />
-            <Route path="/visitas" 
-            element={
-              <RequireRole role="admin">
-                <VisitasPage />
-              </RequireRole>
-            } 
+            <Route path="/visitas"
+              element={
+                <RequireRole role="admin">
+                  <VisitasPage />
+                </RequireRole>
+              }
             />
-            <Route path="/usuarios" 
-            element={
-              <RequireRole role="admin">
-                <UsuariosPage />
-              </RequireRole>
-            } 
+            <Route path="/usuarios"
+              element={
+                <RequireRole role="admin">
+                  <UsuariosPage />
+                </RequireRole>
+              }
             />
 
             {/* placeholders para luego */}
             {/* <Route path="/supervisor" element={<RequireRole role="supervisor"><SupervisorHome/></RequireRole>} /> */}
-            {/* <Route path="/tecnico"    element={<RequireRole role="tecnico"><TecnicoHome/></RequireRole>} /> */}
+            
+            {/* Tecnico */}
+            <Route
+              path="/tecnico"
+              element={
+                <RequireRole role="tecnico">
+                  <TecnicoHome />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/tecnico/visitas/:id"
+              element={
+                <RequireRole role="tecnico">
+                  <TecnicoDetalle />
+                </RequireRole>
+              }
+            />
           </Route>
 
           {/* fallback */}

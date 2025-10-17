@@ -1,0 +1,51 @@
+.kpis { 
+    display:flex; 
+    gap:12px; 
+    margin:12px 0; 
+}
+.kpi { 
+    background:var(--card); 
+    padding:10px 14px; 
+    border:1px solid var(--border); 
+    border-radius:8px; 
+}
+.grid { 
+    display:grid; 
+    grid-template-columns: repeat(auto-fill,minmax(320px,1fr)); 
+    gap:12px; 
+}
+.card { 
+    background:var(--card); 
+    border:1px solid var(--border); 
+    border-radius:10px; 
+    padding:12px; 
+}
+.vcard__head { 
+    display:flex; 
+    gap:8px; 
+    align-items:center; 
+    justify-content:space-between; 
+}
+.vcard__actions { 
+    display:flex; 
+    gap:8px; 
+    flex-wrap:wrap; 
+    margin-top:8px; 
+}
+.timeline { 
+    list-style:none; 
+    padding:0; 
+}
+.timeline li { 
+    padding:6px 0; 
+    border-bottom:1px dashed var(--border); 
+}
+.evidencias .evi { 
+    margin-bottom:8px; 
+}
+.err { 
+    color:#b33; 
+}
+.muted { 
+    color:var(--muted); 
+}

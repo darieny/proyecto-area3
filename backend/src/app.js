@@ -10,6 +10,8 @@ import clientesRoutes from './routes/clientes.routes.js';
 import ubicacionesRoutes from './routes/ubicaciones.routes.js';
 import visitasRoutes from './routes/visitas.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
+import tecnicoRoutes from './routes/tecnico.routes.js';
+
 
 const app = express();
 
@@ -52,6 +54,7 @@ app.use('/api/clientes', clientesRoutes);
 app.use('/api/ubicaciones', ubicacionesRoutes);
 app.use('/api/visitas', visitasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/tecnico', tecnicoRoutes);
 
 export default app;
 
