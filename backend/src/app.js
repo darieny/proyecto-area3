@@ -54,7 +54,7 @@ app.use('/api/clientes', clientesRoutes);
 app.use('/api/ubicaciones', ubicacionesRoutes);
 app.use('/api/visitas', visitasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
-app.use('/tecnico', tecnicoRoutes);
+app.use('/api/tecnico', tecnicoRoutes);
 
 export default app;
 
