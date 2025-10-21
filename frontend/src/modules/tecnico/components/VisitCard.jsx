@@ -31,7 +31,7 @@ export default function VisitCard({ v, onIniciar, onCheckIn, onFinalizar }) {
       </div>
 
       <div className="vcard__actions">
-        <button onClick={abrirComoLlegar}>Cómo llegar</button>
+        <button className="btn btn--map" onClick={abrirComoLlegar}>Cómo llegar</button>
 
         {estado === 'PROGRAMADA' && (
           <button onClick={() => onIniciar(id)}>Iniciar (EN_RUTA)</button>

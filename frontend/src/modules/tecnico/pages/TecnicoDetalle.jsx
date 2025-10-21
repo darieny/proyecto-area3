@@ -79,7 +79,7 @@ export default function TecnicoDetalle() {
               <b>Estado:</b> {data.estado} ·{' '}
               <b>Fecha:</b> {data.fecha ? new Date(data.fecha).toLocaleString() : '—'}
             </p>
-            <p><button onClick={abrirComoLlegar}>Cómo llegar</button></p>
+            <p><button className="btn btn--map" onClick={abrirComoLlegar}>Cómo llegar</button></p>
 
             <h3>Acciones</h3>
             <div className="actions" style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
