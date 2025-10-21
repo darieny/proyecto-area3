@@ -3,6 +3,8 @@ import { useSearchParams, useParams } from 'react-router-dom';
 import Sidebar from '../../dashboard/components/Sidebar';
 import Topbar from '../../dashboard/components/Topbar';
 import { useTecnicoDetalle } from '../hooks/useTecnicoDetalle';
+import '../../dashboard/css/Dashboard.css';
+import '../css/Tecnico.css';
 
 export default function TecnicoDetalle() {
   const { id } = useParams();
@@ -30,14 +32,17 @@ export default function TecnicoDetalle() {
         }
         if (accion === 'finalizar' && data.estado === 'EN_SITIO') {
           const nota = (sp.get('nota') || '').trim();
-          if (!nota) { alert('La nota de cierre es obligatoria para finalizar.'); return; }
+          if (!nota) {
+            alert('La nota de cierre es obligatoria para finalizar.');
+            return;
+          }
           await cambiarEstado('COMPLETADA', { nota });
         }
       } catch {
-
+        // silencioso para no romper vista
       }
     })();
-  }, [sp, data]);
+  }, [sp, data, cambiarEstado]);
 
   const abrirComoLlegar = () => {
     if (!data) return;
@@ -79,16 +84,23 @@ export default function TecnicoDetalle() {
               <b>Estado:</b> {data.estado} ·{' '}
               <b>Fecha:</b> {data.fecha ? new Date(data.fecha).toLocaleString() : '—'}
             </p>
-            <p><button className="btn btn--map" onClick={abrirComoLlegar}>Cómo llegar</button></p>
+            <p>
+              <button className="btn btn--map" onClick={abrirComoLlegar}>
+                Cómo llegar
+              </button>
+            </p>
 
             <h3>Acciones</h3>
-            <div className="actions" style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            <div className="actions">
               {data.estado === 'PROGRAMADA' && (
-                <button onClick={() => cambiarEstado('EN_RUTA')}>Iniciar (EN_RUTA)</button>
+                <button className="btn btn--route" onClick={() => cambiarEstado('EN_RUTA')}>
+                  Iniciar (EN_RUTA)
+                </button>
               )}
 
               {data.estado === 'EN_RUTA' && (
                 <button
+                  className="btn btn--checkin"
                   onClick={() => {
                     if (navigator.geolocation) {
                       navigator.geolocation.getCurrentPosition(
@@ -108,9 +120,13 @@ export default function TecnicoDetalle() {
 
               {data.estado === 'EN_SITIO' && (
                 <button
+                  className="btn btn--done"
                   onClick={async () => {
                     const nota = (prompt('Nota de cierre (obligatoria):') || '').trim();
-                    if (!nota) { alert('Debes escribir la nota para finalizar la visita.'); return; }
+                    if (!nota) {
+                      alert('Debes escribir la nota para finalizar la visita.');
+                      return;
+                    }
                     await cambiarEstado('COMPLETADA', { nota });
                   }}
                 >
@@ -118,7 +134,9 @@ export default function TecnicoDetalle() {
                 </button>
               )}
 
-              <button onClick={handleSubirEvidencia}>Subir evidencia (URL)</button>
+              <button className="btn btn--ghost" onClick={handleSubirEvidencia}>
+                Subir evidencia (URL)
+              </button>
             </div>
 
             <h3>Timeline</h3>
@@ -133,11 +151,11 @@ export default function TecnicoDetalle() {
             </ul>
 
             <h3>Evidencias</h3>
-            <div className="evidencias" style={{ display:'grid', gap:12 }}>
+            <div className="evidencias">
               {data.evidencias?.map(e => (
-                <div key={e.id} className="evi" style={{ padding:10, border:'1px solid var(--border)', borderRadius:8 }}>
+                <div key={e.id} className="evi">
                   <a href={e.url} target="_blank" rel="noreferrer">Ver evidencia</a>
-                  {e.nota && <p style={{ margin:'6px 0 0' }}>{e.nota}</p>}
+                  {e.nota && <p style={{ margin: '6px 0 0' }}>{e.nota}</p>}
                 </div>
               ))}
               {(!data.evidencias || data.evidencias.length === 0) && <p>Sin evidencias.</p>}
@@ -148,5 +166,6 @@ export default function TecnicoDetalle() {
     </div>
   );
 }
+
 
 

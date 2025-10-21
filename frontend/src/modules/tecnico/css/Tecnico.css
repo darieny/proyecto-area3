@@ -5,7 +5,6 @@
   gap: 12px;
   padding: 16px 22px;
 }
-
 .kpi {
   background: var(--card);
   padding: 10px 16px;
@@ -90,28 +89,69 @@
   border: 1px solid #ddd;
   background: #fff;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 999px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
 }
-.btn:hover {
-  background: #f7f7fb;
-  transform: translateY(-1px);
+.btn:hover { background: #f7f7fb; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  filter: grayscale(20%);
 }
-.btn--pri {
-  border-color: #c8cdfa;
-  background: #eef1ff;
+
+/* Botón "Cómo llegar" */
+.btn--map {
+  border-color: #cfe3ff;
+  background: #eef5ff;
 }
-.btn--pri:hover {
-  background: #e3e7ff;
+.btn--map:hover { background: #e4efff; }
+.btn--map::before {
+  content: "📍";
+  margin-right: 6px;
 }
-.btn--success {
+
+/* EN_RUTA (amarillo) */
+.btn--route {
+  border-color: #ffe8a3;
+  background: #fff8df;
+}
+.btn--route:hover { background: #fff2c3; }
+.btn--route::before { content: "🛣️"; }
+
+/* EN_SITIO (azul) */
+.btn--checkin {
+  border-color: #cfe3ff;
+  background: #eef5ff;
+}
+.btn--checkin:hover { background: #e4efff; }
+.btn--checkin::before { content: "📍"; }
+
+/* COMPLETADA (verde) */
+.btn--done {
   border-color: #b5e6c4;
   background: #eafaf0;
 }
-.btn--success:hover {
-  background: #e2f5e9;
+.btn--done:hover { background: #e2f5e9; }
+.btn--done::before { content: "✅"; }
+
+/* Evidencia “fantasma” */
+.btn--ghost {
+  border-color: #ddd;
+  background: #fff;
+}
+.btn--ghost:hover { background: #f7f7fb; }
+
+/* Contenedor de acciones */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* ====== Títulos y texto ====== */
@@ -123,12 +163,8 @@
   font-size: 16px;
   margin: 16px 22px 8px;
 }
-.muted {
-  color: var(--muted);
-}
-.error {
-  color: #b33;
-}
+.muted { color: var(--muted); }
+.error { color: #b33; }
 
 /* ====== Timeline ====== */
 .timeline {
@@ -153,12 +189,8 @@
   border-radius: 50%;
   background: var(--border);
 }
-.timeline li b {
-  margin-right: 4px;
-}
-.timeline li i {
-  color: var(--muted);
-}
+.timeline li b { margin-right: 4px; }
+.timeline li i { color: var(--muted); }
 
 /* ====== Evidencias ====== */
 .evidencias {
@@ -177,25 +209,5 @@
   color: #0055cc;
   text-decoration: none;
 }
-.evi a:hover {
-  text-decoration: underline;
-}
+.evi a:hover { text-decoration: underline; }
 
-/* Botón "Cómo llegar" */
-.btn--map {
-  border-color: #cfe3ff;
-  background: #eef5ff;
-}
-.btn--map:hover {
-  background: #e4efff;
-}
-.btn--map::before {
-  content: "📍";
-  margin-right: 6px;
-}
-
-/* Ajuste compacto dentro de las cards */
-.vcard__actions .btn--map {
-  padding: 7px 12px;
-  border-radius: 999px;
-}
