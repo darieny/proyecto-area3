@@ -18,7 +18,7 @@ function haversineMeters(a, b) {
 
 // Constantes de catálogo/flujo
 const STATUS_GROUP = 'VISITA_STATUS';
-const FLOW = ['PROGRAMADA', 'EN_RUTA', 'EN_SITIO', 'COMPLETADA']; //
+const FLOW = ['PROGRAMADA', 'EN_RUTA', 'EN_SITIO', 'COMPLETADA']; // usa 'FINALIZADA' si tu catálogo lo maneja así
 const CANCEL = 'CANCELADA';
 
 // Helpers de catálogo
@@ -68,7 +68,7 @@ export async function listMisVisitas(req, res) {
         u.longitud AS longitud,
         (COALESCE(u.direccion_linea1,'') || ' ' || COALESCE(u.direccion_linea2,'')) AS direccion
       FROM visitas v
-      JOIN clientes c        ON c.id = v.cliente_id
+      JOIN clientes c         ON c.id = v.cliente_id
       LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
       LEFT JOIN catalogo_items ps    ON ps.id = v.status_id
       LEFT JOIN catalogo_items pprio ON pprio.id = v.priority_id
@@ -84,7 +84,7 @@ export async function listMisVisitas(req, res) {
       descripcion: r.descripcion,
       fecha: r.programada_inicio || r.real_inicio,
       prioridad: r.prioridad,
-      estado: r.status_codigo,         // PROGRAMADA | EN_RUTA | EN_SITIO | COMPLETADA | CANCELADA
+      estado: r.status_codigo,         // PROGRAMADA | EN_RUTA | EN_SITIO | COMpletada | CANCELADA
       estado_label: r.status_etiqueta,
       lat: r.latitud,
       lng: r.longitud,
@@ -138,7 +138,7 @@ export async function getVisitaDetalle(req, res) {
       ORDER BY l.fecha ASC
     `, [id]);
 
-    // Evidencias (tu tabla no tiene created_at; ordeno por id)
+    // Evidencias (orden por id)
     const { rows: evidencias } = await query(`
       SELECT id, archivo_url AS url, descripcion
       FROM evidencias
@@ -236,15 +236,11 @@ export async function postEventoVisita(req, res) {
     }
 
     if (nuevo_estado_codigo === 'COMPLETADA') {
-      sets.push('real_fin = NOW()');
-
-      // Exigir evidencia o nota
-      if (!nota) {
-        const { rows: evs } = await query('SELECT 1 FROM evidencias WHERE visita_id = $1 LIMIT 1', [id]);
-        if (evs.length === 0) {
-          return res.status(422).json({ error: 'Para completar: sube evidencia o agrega una nota' });
-        }
+      // Nota obligatoria
+      if (!nota || String(nota).trim() === '') {
+        return res.status(422).json({ error: 'No puedes finalizar sin una nota de cierre.' });
       }
+      sets.push('real_fin = NOW()');
     }
 
     // Transacción
@@ -296,7 +292,7 @@ export async function postEvidenciaVisita(req, res) {
       [id, tecnicoUserId, url, nota || null]
     );
 
-    // tu tabla no tiene created_at; devuelvo lista ordenada por id
+    // se devuelve lista ordenada por id
     const { rows: evidencias } = await query(
       `SELECT id, archivo_url AS url, descripcion AS nota
        FROM evidencias
@@ -330,7 +326,7 @@ export async function getTecnicoSummary(req, res) {
         COUNT(*) FILTER (WHERE s.codigo = 'PROGRAMADA') AS programadas,
         COUNT(*) FILTER (WHERE s.codigo = 'EN_RUTA')    AS en_ruta,
         COUNT(*) FILTER (WHERE s.codigo = 'EN_SITIO')   AS en_sitio,
-        COUNT(*) FILTER (WHERE s.codigo = 'COMPLETADA') AS completadas -- <- usa FINALIZADA si cambias FLOW
+        COUNT(*) FILTER (WHERE s.codigo = 'COMPLETADA') AS completadas
       FROM visitas v
       JOIN catalogo_items s ON s.id = v.status_id AND s.grupo_id = $${params.length + 1}
       WHERE ${where.join(' AND ')}
@@ -342,4 +338,5 @@ export async function getTecnicoSummary(req, res) {
     res.status(500).json({ error: 'Error en summary' });
   }
 }
+
 
