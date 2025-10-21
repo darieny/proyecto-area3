@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTecnicoVisitas } from '../hooks/useTecnicoVisitas';
 import VisitCard from '../components/VisitCard';
@@ -13,27 +14,49 @@ export default function TecnicoHome() {
   const nav = useNavigate();
 
   const onIniciar = (id) => nav(`/tecnico/visitas/${id}?accion=iniciar`);
-  const onCheckIn = (id, geo) => nav(`/tecnico/visitas/${id}?accion=checkin${geo ? `&lat=${geo.lat}&lng=${geo.lng}`:''}`);
-  const onFinalizar = (id, nota) => nav(`/tecnico/visitas/${id}?accion=finalizar${nota?`&nota=${encodeURIComponent(nota)}`:''}`);
+  const onCheckIn = (id, geo) =>
+    nav(`/tecnico/visitas/${id}?accion=checkin${geo ? `&lat=${geo.lat}&lng=${geo.lng}` : ''}`);
+  const onFinalizar = (id, nota) =>
+    nav(`/tecnico/visitas/${id}?accion=finalizar${nota ? `&nota=${encodeURIComponent(nota)}` : ''}`);
+
+
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="shell">
-      <Sidebar />
-      <main>
-        <Topbar title="Mis visitas de hoy" />
-        {loading && <p>Cargando...</p>}
-        {err && <p className="err">{err}</p>}
+    <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={() => setMobileOpen(false)}
+      />
+
+      <main className="main">
+        <Topbar
+          onToggleCollapse={() => setCollapsed(v => !v)}
+          onToggleMobile={() => setMobileOpen(v => !v)}
+        />
+
+        {loading && <p className="skeleton">Cargando...</p>}
+        {err && <p className="error">{err}</p>}
+
         {summary && (
-          <div className="kpis">
-            <div className="kpi">Programadas <b>{summary.programadas || 0}</b></div>
-            <div className="kpi">En ruta <b>{summary.en_ruta || 0}</b></div>
-            <div className="kpi">En sitio <b>{summary.en_sitio || 0}</b></div>
-            <div className="kpi">Finalizadas <b>{summary.finalizadas || 0}</b></div>
+          <div className="kpis kpis--row">
+            <div className="kpi kpi--pill">Programadas <b>{summary.programadas || 0}</b></div>
+            <div className="kpi kpi--pill">En ruta <b>{summary.en_ruta || 0}</b></div>
+            <div className="kpi kpi--pill">En sitio <b>{summary.en_sitio || 0}</b></div>
+            <div className="kpi kpi--pill">Completadas <b>{summary.completadas || 0}</b></div>
           </div>
         )}
-        <div className="grid">
+
+        <div className="grid grid--cards">
           {items.map(v => (
-            <VisitCard key={v.id} v={v} onIniciar={onIniciar} onCheckIn={onCheckIn} onFinalizar={onFinalizar}/>
+            <VisitCard
+              key={v.id}
+              v={v}
+              onIniciar={onIniciar}
+              onCheckIn={onCheckIn}
+              onFinalizar={onFinalizar}
+            />
           ))}
           {(!loading && items.length === 0) && <p>No tienes visitas para hoy.</p>}
         </div>

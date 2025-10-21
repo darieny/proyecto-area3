@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import Sidebar from '../../dashboard/components/Sidebar';
 import Topbar from '../../dashboard/components/Topbar';
@@ -9,7 +9,10 @@ export default function TecnicoDetalle() {
   const [sp] = useSearchParams();
   const { data, loading, err, cambiarEstado, subirEvidencia } = useTecnicoDetalle(id);
 
-  // Soporte para acciones vía querystring (iniciar, checkin, finalizar)
+  // === estados UI para menú 
+  const [collapsed, setCollapsed] = useState(false);   // colapsado desktop
+  const [mobileOpen, setMobileOpen] = useState(false); // off-canvas móvil
+
   useEffect(() => {
     const accion = sp.get('accion');
     if (!accion || !data) return;
@@ -26,19 +29,14 @@ export default function TecnicoDetalle() {
           });
         }
         if (accion === 'finalizar' && data.estado === 'EN_SITIO') {
-          // nota obligatoria
-          const notaQS = sp.get('nota') || '';
-          const nota = String(notaQS).trim();
-          if (!nota) {
-            alert('La nota de cierre es obligatoria para finalizar.');
-            return;
-          }
+          const nota = (sp.get('nota') || '').trim();
+          if (!nota) { alert('La nota de cierre es obligatoria para finalizar.'); return; }
           await cambiarEstado('COMPLETADA', { nota });
         }
       } catch {
+
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sp, data]);
 
   const abrirComoLlegar = () => {
@@ -58,10 +56,18 @@ export default function TecnicoDetalle() {
   };
 
   return (
-    <div className="shell">
-      <Sidebar />
+    <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={() => setMobileOpen(false)}
+      />
+
       <main className="main">
-        <Topbar title="Detalle de visita" />
+        <Topbar
+          onToggleCollapse={() => setCollapsed(v => !v)}
+          onToggleMobile={() => setMobileOpen(v => !v)}
+        />
+
         {loading && <p>Cargando...</p>}
         {err && <p className="error">{err}</p>}
 
@@ -73,9 +79,7 @@ export default function TecnicoDetalle() {
               <b>Estado:</b> {data.estado} ·{' '}
               <b>Fecha:</b> {data.fecha ? new Date(data.fecha).toLocaleString() : '—'}
             </p>
-            <p>
-              <button onClick={abrirComoLlegar}>Cómo llegar</button>
-            </p>
+            <p><button onClick={abrirComoLlegar}>Cómo llegar</button></p>
 
             <h3>Acciones</h3>
             <div className="actions" style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -91,7 +95,7 @@ export default function TecnicoDetalle() {
                         pos => cambiarEstado('EN_SITIO', {
                           geo: { lat: pos.coords.latitude, lng: pos.coords.longitude }
                         }),
-                        () => cambiarEstado('EN_SITIO') // sin geo si falla
+                        () => cambiarEstado('EN_SITIO')
                       );
                     } else {
                       cambiarEstado('EN_SITIO');
@@ -105,12 +109,9 @@ export default function TecnicoDetalle() {
               {data.estado === 'EN_SITIO' && (
                 <button
                   onClick={async () => {
-                    const nota = prompt('Nota de cierre (obligatoria):') || '';
-                    if (!nota || !nota.trim()) {
-                      alert('Debes escribir la nota para finalizar la visita.');
-                      return;
-                    }
-                    await cambiarEstado('COMPLETADA', { nota: nota.trim() });
+                    const nota = (prompt('Nota de cierre (obligatoria):') || '').trim();
+                    if (!nota) { alert('Debes escribir la nota para finalizar la visita.'); return; }
+                    await cambiarEstado('COMPLETADA', { nota });
                   }}
                 >
                   Finalizar (COMPLETADA)
@@ -124,8 +125,7 @@ export default function TecnicoDetalle() {
             <ul className="timeline">
               {data.eventos?.map(ev => (
                 <li key={ev.id}>
-                  <b>{ev.estado_nuevo}</b> —{' '}
-                  {new Date(ev.created_at || ev.fecha).toLocaleString()}
+                  <b>{ev.estado_nuevo}</b> — {new Date(ev.created_at || ev.fecha).toLocaleString()}
                   {ev.nota && <> · <i>{ev.nota}</i></>}
                 </li>
               ))}
@@ -148,4 +148,5 @@ export default function TecnicoDetalle() {
     </div>
   );
 }
+
 

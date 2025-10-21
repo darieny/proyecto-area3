@@ -1,51 +1,183 @@
-.kpis { 
-    display:flex; 
-    gap:12px; 
-    margin:12px 0; 
+/* ====== KPIs ====== */
+.kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 22px;
 }
-.kpi { 
-    background:var(--card); 
-    padding:10px 14px; 
-    border:1px solid var(--border); 
-    border-radius:8px; 
+
+.kpi {
+  background: var(--card);
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 14px;
+  box-shadow: var(--shadow, 0 1px 3px rgba(0,0,0,0.05));
 }
-.grid { 
-    display:grid; 
-    grid-template-columns: repeat(auto-fill,minmax(320px,1fr)); 
-    gap:12px; 
+.kpi b {
+  margin-left: 4px;
+  font-size: 16px;
 }
-.card { 
-    background:var(--card); 
-    border:1px solid var(--border); 
-    border-radius:10px; 
-    padding:12px; 
+
+/* ====== GRID de tarjetas ====== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 16px 22px;
 }
-.vcard__head { 
-    display:flex; 
-    gap:8px; 
-    align-items:center; 
-    justify-content:space-between; 
+
+/* ====== CARD base ====== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow, 0 1px 3px rgba(0,0,0,0.08));
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-.vcard__actions { 
-    display:flex; 
-    gap:8px; 
-    flex-wrap:wrap; 
-    margin-top:8px; 
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
 }
-.timeline { 
-    list-style:none; 
-    padding:0; 
+
+/* ====== VisitCard ====== */
+.vcard__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
-.timeline li { 
-    padding:6px 0; 
-    border-bottom:1px dashed var(--border); 
+.vcard__title {
+  font-weight: 600;
+  font-size: 15px;
 }
-.evidencias .evi { 
-    margin-bottom:8px; 
+.vcard__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
-.err { 
-    color:#b33; 
+.vcard__body {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--muted);
 }
-.muted { 
-    color:var(--muted); 
+.vcard__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }
+
+/* ====== Chips (estados, prioridad) ====== */
+.chip {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 12px;
+  line-height: 1;
+}
+.chip--programada { background: #eef2ff; color: #334; }
+.chip--en_ruta { background: #e8fbff; color: #045; }
+.chip--en_sitio { background: #eaffea; color: #053; }
+.chip--completada { background: #f0fff4; color: #063; }
+.chip--prio { background: #fff5e6; color: #653; }
+
+/* ====== Botones ====== */
+.btn {
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.btn:hover {
+  background: #f7f7fb;
+  transform: translateY(-1px);
+}
+.btn--pri {
+  border-color: #c8cdfa;
+  background: #eef1ff;
+}
+.btn--pri:hover {
+  background: #e3e7ff;
+}
+.btn--success {
+  border-color: #b5e6c4;
+  background: #eafaf0;
+}
+.btn--success:hover {
+  background: #e2f5e9;
+}
+
+/* ====== Títulos y texto ====== */
+.h2 {
+  font-size: 22px;
+  margin: 12px 22px 6px;
+}
+.h3 {
+  font-size: 16px;
+  margin: 16px 22px 8px;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: #b33;
+}
+
+/* ====== Timeline ====== */
+.timeline {
+  list-style: none;
+  padding: 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.timeline li {
+  border-left: 3px solid var(--border);
+  padding-left: 10px;
+  position: relative;
+}
+.timeline li::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.timeline li b {
+  margin-right: 4px;
+}
+.timeline li i {
+  color: var(--muted);
+}
+
+/* ====== Evidencias ====== */
+.evidencias {
+  padding: 0 22px;
+  display: grid;
+  gap: 12px;
+}
+.evidencias .evi {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: var(--shadow, 0 1px 2px rgba(0,0,0,0.05));
+}
+.evi a {
+  color: #0055cc;
+  text-decoration: none;
+}
+.evi a:hover {
+  text-decoration: underline;
+}
+
