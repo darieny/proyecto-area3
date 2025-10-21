@@ -35,7 +35,7 @@ export default function VisitCard({ v, onIniciar, onCheckIn, onFinalizar }) {
           <button onClick={() => {
             const nota = prompt('Nota de cierre (opcional si ya hay evidencia):') || '';
             onFinalizar(id, nota);
-          }}>Finalizar (FINALIZADA)</button>
+          }}>Finalizar (COMPLETADA)</button>
         )}
       </div>
     </div>

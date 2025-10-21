@@ -74,8 +74,8 @@ export default function TecnicoDetalle() {
               {data.estado === 'EN_SITIO' && (
                 <button onClick={async () => {
                   const nota = prompt('Nota de cierre (opcional):') || '';
-                  await cambiarEstado('FINALIZADA', { nota });
-                }}>Finalizar (FINALIZADA)</button>
+                  await cambiarEstado('COMPLETADA', { nota });
+                }}>Finalizar (COMPLETADA)</button>
               )}
               <button onClick={handleSubirEvidencia}>Subir evidencia (URL)</button>
             </div>
