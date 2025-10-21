@@ -181,3 +181,21 @@
   text-decoration: underline;
 }
 
+/* Botón "Cómo llegar" */
+.btn--map {
+  border-color: #cfe3ff;
+  background: #eef5ff;
+}
+.btn--map:hover {
+  background: #e4efff;
+}
+.btn--map::before {
+  content: "📍";
+  margin-right: 6px;
+}
+
+/* Ajuste compacto dentro de las cards */
+.vcard__actions .btn--map {
+  padding: 7px 12px;
+  border-radius: 999px;
+}
