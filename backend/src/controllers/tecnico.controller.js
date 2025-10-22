@@ -1,3 +1,4 @@
+// src/controllers/tecnico.controller.js
 import { query } from '../config/db.js';
 
 /* =========================
@@ -7,18 +8,18 @@ import { query } from '../config/db.js';
 // Distancia Haversine (metros)
 function haversineMeters(a, b) {
   const R = 6371000;
-  const toRad = d => d * Math.PI/180;
+  const toRad = d => d * Math.PI / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
   const sa =
-    Math.sin(dLat/2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng/2) ** 2;
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(sa));
 }
 
 // Constantes de catálogo/flujo
 const STATUS_GROUP = 'VISITA_STATUS';
-const FLOW = ['PROGRAMADA', 'EN_RUTA', 'EN_SITIO', 'COMPLETADA']; // usa 'FINALIZADA' si tu catálogo lo maneja así
+const FLOW = ['PROGRAMADA', 'EN_RUTA', 'EN_SITIO', 'COMPLETADA'];
 const CANCEL = 'CANCELADA';
 
 // Helpers de catálogo
@@ -84,7 +85,7 @@ export async function listMisVisitas(req, res) {
       descripcion: r.descripcion,
       fecha: r.programada_inicio || r.real_inicio,
       prioridad: r.prioridad,
-      estado: r.status_codigo,         // PROGRAMADA | EN_RUTA | EN_SITIO | COMpletada | CANCELADA
+      estado: r.status_codigo,         // PROGRAMADA | EN_RUTA | EN_SITIO | COMPLETADA | CANCELADA
       estado_label: r.status_etiqueta,
       lat: r.latitud,
       lng: r.longitud,
@@ -188,8 +189,8 @@ export async function postEventoVisita(req, res) {
 
     // Cargar visita (estado actual + destino)
     const { rows } = await query(`
-      SELECT v.id, v.tecnico_asignado_id, v.status_id,
-             v.real_inicio, v.real_fin,
+      SELECT v.id, v.cliente_id, v.tecnico_asignado_id, v.status_id,
+             v.titulo, v.descripcion, v.real_inicio, v.real_fin,
              u.latitud, u.longitud
       FROM visitas v
       LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
@@ -264,6 +265,58 @@ export async function postEventoVisita(req, res) {
       ORDER BY l.fecha ASC
     `, [id]);
 
+    // -------- Envío de correo al completar --------
+    if (nuevo_estado_codigo === 'COMPLETADA') {
+      try {
+        // Traer datos del cliente y del técnico para el correo
+        const { rows: info } = await query(`
+          SELECT c.correo        AS cliente_correo,
+                 c.nombre        AS cliente_nombre,
+                 v.titulo,
+                 v.descripcion,
+                 v.real_fin,
+                 tu.nombre_completo AS tecnico_nombre
+          FROM visitas v
+          JOIN clientes c ON c.id = v.cliente_id
+          LEFT JOIN usuarios tu ON tu.id = v.tecnico_asignado_id
+          WHERE v.id = $1
+        `, [id]);
+
+        const cli = info[0];
+        if (cli?.cliente_correo) {
+          const { sendMail } = await import('../utils/mailer.js');
+
+          const asunto = `Reporte de visita completada: ${cli.titulo}`;
+          const cuerpoHTML = `
+            <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:640px;margin:auto">
+              <h2 style="margin-bottom:8px">Visita completada </h2>
+              <p>Hola <b>${cli.cliente_nombre}</b>,</p>
+              <p>La visita <b>"${cli.titulo}"</b> fue marcada como <b>COMPLETADA</b>.</p>
+              <ul>
+                <li><b>Técnico:</b> ${cli.tecnico_nombre || '—'}</li>
+                <li><b>Fecha de cierre:</b> ${cli.real_fin ? new Date(cli.real_fin).toLocaleString() : '—'}</li>
+              </ul>
+              <p><b>Nota de cierre:</b><br/>${nota ? String(nota).replace(/\n/g,'<br/>') : '(sin nota)'}</p>
+              ${cli.descripcion ? `<p><b>Descripción:</b><br/>${String(cli.descripcion).replace(/\n/g,'<br/>')}</p>` : ''}
+              <hr style="margin:20px 0;border:none;border-top:1px solid #eee"/>
+              <p style="color:#666">Gracias por confiar en nosotros.<br/>Equipo de Proyecto Área 3</p>
+            </div>
+          `;
+
+          await sendMail({
+            to: cli.cliente_correo,
+            subject: asunto,
+            html: cuerpoHTML,
+          });
+        } else {
+          console.log('Cliente sin correo; se omite el envío.');
+        }
+      } catch (mailErr) {
+        console.error('Error al enviar correo de visita completada:', mailErr.message);
+      }
+    }
+    // ---------------------------------------------
+
     res.json({ ok: true, estado: estadoRow[0]?.codigo, eventos });
   } catch (e) {
     await query('ROLLBACK').catch(() => {});
@@ -292,7 +345,6 @@ export async function postEvidenciaVisita(req, res) {
       [id, tecnicoUserId, url, nota || null]
     );
 
-    // se devuelve lista ordenada por id
     const { rows: evidencias } = await query(
       `SELECT id, archivo_url AS url, descripcion AS nota
        FROM evidencias
