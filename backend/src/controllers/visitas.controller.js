@@ -31,6 +31,7 @@ async function ensureUbicacionPerteneceACliente(ubicacion_id, cliente_id) {
   if (!rows[0]) throw new Error('ubicacion_id no pertenece al cliente');
 }
 
+/** Selección “normalizada” para lista/detalle (ADMIN) */
 function buildSelectNormalizado() {
   return `
     v.id, v.cliente_id, c.nombre AS cliente_nombre,
@@ -38,7 +39,11 @@ function buildSelectNormalizado() {
     v.titulo, v.descripcion,
     v.tecnico_asignado_id, tu.nombre_completo AS tecnico_nombre,
     v.creado_por_id, cu.nombre_completo AS creado_por_nombre,
-    v.status_id, s.etiqueta AS status_etiqueta, s.color AS status_color,
+    v.status_id,
+    s.codigo   AS estado_codigo,      -- NUEVO: código textual (PROGRAMADA, EN_RUTA…)
+    s.etiqueta AS estado_label,       -- NUEVO: etiqueta legible
+    s.etiqueta AS status_etiqueta,    -- (compatibilidad)
+    s.color    AS status_color,       -- (compatibilidad)
     v.priority_id, pr.etiqueta AS priority_etiqueta, pr.color AS priority_color,
     v.type_id, ty.etiqueta AS type_etiqueta,
     v.programada_inicio, v.programada_fin, v.real_inicio, v.real_fin
@@ -55,7 +60,7 @@ function orderSqlFrom(order) {
 }
 
 /** =========================
- * Listar visitas
+ * Listar visitas (ADMIN)
  * ========================= */
 export async function list(req, res, next) {
   try {
@@ -64,7 +69,9 @@ export async function list(req, res, next) {
 
     const filters = {
       q: req.query.q,
+      // soportamos ambas formas: por id numérico o por código textual
       status_id: req.query.status_id,
+      estado: req.query.estado,                 // NUEVO: PROGRAMADA | EN_RUTA | …
       priority_id: req.query.priority_id,
       type_id: req.query.type_id,
       cliente_id: req.query.cliente_id,
@@ -75,51 +82,68 @@ export async function list(req, res, next) {
 
     const params = [];
     const where = [];
+
     if (filters.q) {
       params.push(`%${filters.q}%`);
       where.push(`(v.titulo ILIKE $${params.length} OR v.descripcion ILIKE $${params.length})`);
     }
     if (filters.status_id) { params.push(filters.status_id); where.push(`v.status_id = $${params.length}`); }
+    if (filters.estado)    { params.push(filters.estado);    where.push(`s.codigo = $${params.length}`); } // NUEVO
     if (filters.priority_id) { params.push(filters.priority_id); where.push(`v.priority_id = $${params.length}`); }
     if (filters.type_id) { params.push(filters.type_id); where.push(`v.type_id = $${params.length}`); }
     if (filters.cliente_id) { params.push(filters.cliente_id); where.push(`v.cliente_id = $${params.length}`); }
     if (filters.tecnico_id) { params.push(filters.tecnico_id); where.push(`v.tecnico_asignado_id = $${params.length}`); }
     if (filters.desde) { params.push(filters.desde); where.push(`v.programada_inicio >= $${params.length}`); }
     if (filters.hasta) { params.push(filters.hasta); where.push(`v.programada_inicio < $${params.length}`); }
+
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const orderSql = orderSqlFrom(order);
-
     const selectNorm = buildSelectNormalizado();
 
-    const { rows } = await query(
-      `
+    const sql = `
       SELECT ${selectNorm}
       FROM visitas v
-      JOIN clientes c ON c.id = v.cliente_id
+      JOIN clientes c        ON c.id = v.cliente_id
       LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
-      LEFT JOIN usuarios tu ON tu.id = v.tecnico_asignado_id
-      JOIN usuarios cu ON cu.id = v.creado_por_id
-      LEFT JOIN catalogo_items s ON s.id = v.status_id
+      LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu        ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s  ON s.id  = v.status_id         -- importante para estado_codigo
       LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
       LEFT JOIN catalogo_items ty ON ty.id = v.type_id
       ${whereSql}
       ${orderSql}
       LIMIT $${params.push(limit)} OFFSET $${params.push(offset)}
-      `,
-      params
-    );
+    `;
+    const { rows } = await query(sql, params);
 
-    const { rows: countRows } = await query(
-      `SELECT COUNT(*) AS total FROM visitas v ${whereSql}`,
-      params.slice(0, params.length - 2) // mismos filtros sin limit/offset
-    );
+    // COUNT con los mismos JOINs para que el filtro por estado funcione
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM visitas v
+      JOIN clientes c        ON c.id = v.cliente_id
+      LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+      LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu        ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s  ON s.id  = v.status_id
+      LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+      LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+      ${whereSql}
+    `;
+    const { rows: countRows } = await query(countSql, params.slice(0, params.length - 2));
 
-    res.json({ items: rows, meta: { total: Number(countRows[0].total), page: Number(page||1), pageSize: Number(pageSize||10) } });
+    res.json({
+      items: rows,
+      meta: {
+        total: Number(countRows[0].total),
+        page: Number(page || 1),
+        pageSize: Number(pageSize || 10),
+      }
+    });
   } catch (e) { next(e); }
 }
 
 /** =========================
- * Obtener una visita (detalle)
+ * Obtener una visita (detalle ADMIN)
  * ========================= */
 export async function getOne(req, res, next) {
   try {
@@ -129,11 +153,11 @@ export async function getOne(req, res, next) {
       `
       SELECT ${selectNorm}
       FROM visitas v
-      JOIN clientes c ON c.id = v.cliente_id
+      JOIN clientes c        ON c.id = v.cliente_id
       LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
-      LEFT JOIN usuarios tu ON tu.id = v.tecnico_asignado_id
-      JOIN usuarios cu ON cu.id = v.creado_por_id
-      LEFT JOIN catalogo_items s ON s.id = v.status_id
+      LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu        ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s  ON s.id  = v.status_id
       LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
       LEFT JOIN catalogo_items ty ON ty.id = v.type_id
       WHERE v.id = $1
@@ -142,9 +166,14 @@ export async function getOne(req, res, next) {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Visita no encontrada' });
 
-    // Contadores básicos
-    const { rows: obs } = await query(`SELECT COUNT(*)::int AS n FROM visita_observaciones WHERE visita_id=$1`, [id]);
-    const { rows: evs } = await query(`SELECT COUNT(*)::int AS n FROM evidencias WHERE visita_id=$1`, [id]);
+    const { rows: obs } = await query(
+      `SELECT COUNT(*)::int AS n FROM visita_observaciones WHERE visita_id=$1`,
+      [id]
+    );
+    const { rows: evs } = await query(
+      `SELECT COUNT(*)::int AS n FROM evidencias WHERE visita_id=$1`,
+      [id]
+    );
 
     res.json({ ...rows[0], observaciones_count: obs[0].n, evidencias_count: evs[0].n });
   } catch (e) { next(e); }

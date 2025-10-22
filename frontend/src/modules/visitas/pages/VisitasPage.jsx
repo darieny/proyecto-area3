@@ -1,4 +1,3 @@
-// src/modules/visitas/pages/VisitasPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -14,19 +13,22 @@ import { useTecnicos } from "../hooks/useTecnicos.js";
 import { api } from "../../../services/http.js";
 import "../css/visitas.css";
 
+/* ---------- helpers QS ---------- */
 function parseQS(sp) {
   const toNum = (v, def) => (v && !Number.isNaN(Number(v)) ? Number(v) : def);
   const val = (k) => (sp.get(k) ?? "").trim() || "";
   return {
-    search: val("search"),
+    q: val("q"),
     cliente_id: val("cliente_id"),
-    tipo: val("tipo"),
-    prioridad: val("prioridad"),
-    estado: val("estado"),
-    from: val("from"),
-    to: val("to"),
+    type_id: val("type_id"),
+    priority_id: val("priority_id"),
+    estado: val("estado"),          // PROGRAMADA | EN_RUTA | EN_SITIO | COMPLETADA
+    tecnico_id: val("tecnico_id"),
+    desde: val("desde"),
+    hasta: val("hasta"),
     page: toNum(sp.get("page"), 1),
     pageSize: toNum(sp.get("pageSize"), 10),
+    order: val("order") || "recientes",
   };
 }
 
@@ -63,41 +65,51 @@ function AsignarTecnicoModal({ open, visita, onClose, onSaved }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h3>Asignar técnico</h3>
         <form onSubmit={onSubmit} className="form">
-          <label>Técnico
+          <label>
+            Técnico
             <select
               value={tecnicoId || ""}
               onChange={(e) => setTecnicoId(e.target.value)}
               required
             >
-              <option value="" disabled>Selecciona…</option>
+              <option value="" disabled>
+                Selecciona…
+              </option>
               {tecnicos.map((t) => (
-                <option key={t.id} value={t.id}>{t.nombre_completo}</option>
+                <option key={t.id} value={t.id}>
+                  {t.nombre_completo}
+                </option>
               ))}
             </select>
           </label>
           <div className="row end gap">
-            <button type="button" className="btn" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn primary">Guardar</button>
+            <button type="button" className="btn" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn primary">
+              Guardar
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
 }
-/* -----------------VISITAS----------------------------- */
 
+/* ----------------- VISITAS (ADMIN) ----------------------------- */
 export default function VisitasPage() {
   const [collapsed, setCollapsed] = useState(false);   // desktop
-  const [mobileOpen, setMobileOpen] = useState(false); // cel
+  const [mobileOpen, setMobileOpen] = useState(false); // móvil
+
   const [sp, setSp] = useSearchParams();
-  const initialFromQS = useMemo(() => parseQS(sp), []);
+  const initialFromQS = useMemo(() => parseQS(sp), []); // solo una vez
 
   const { items, meta, loading, filters, setFilters, reload } = useVisitas({
     pageSize: 10,
-    ...initialFromQS,
+    ...initialFromQS,               // ya incluye q/estado/desde/hasta
   });
 
-  // KPIs rápidos en cliente (provisorios)
+  // KPIs rápidos (calculados en cliente)
   const kpis = useMemo(() => {
     const now = Date.now();
     const isSameDay = (iso) => {
@@ -118,14 +130,14 @@ export default function VisitasPage() {
     for (const v of items) {
       if (isSameDay(v.programada_inicio)) hoy += 1;
 
-      // atrasadas: programadas con fin ya pasado
-      if (Number(v.status_id) === 1) {
+      // Atrasadas: programadas cuyo fin ya pasó y siguen en PROGRAMADA
+      if (v.estado_codigo === "PROGRAMADA") {
         const fin = v.programada_fin ? Date.parse(v.programada_fin) : null;
         if (fin && fin < now) atrasadas += 1;
       }
 
-      // completadas últimos 7 días
-      if (Number(v.status_id) === 3) {
+      // Completadas últimos 7 días (por fecha programada, ajústalo si prefieres real_fin)
+      if (v.estado_codigo === "COMPLETADA") {
         const ini = v.programada_inicio ? Date.parse(v.programada_inicio) : null;
         if (ini && now - ini <= 7 * 24 * 3600 * 1000) semanaCompletadas += 1;
       }
@@ -134,12 +146,12 @@ export default function VisitasPage() {
     return { hoy, atrasadas, semanaCompletadas };
   }, [items]);
 
-  // sincroniza la URL con los filtros
+  // Sincroniza la URL con los filtros activos
   useEffect(() => {
     setSp(buildQS(filters), { replace: true });
   }, [filters, setSp]);
 
-  // Drawer
+  // Drawer (detalle)
   const [selected, setSelected] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const openDetail = (v) => { setSelected(v); setDrawerOpen(true); };
@@ -173,6 +185,7 @@ export default function VisitasPage() {
 
           <VisitasKpis stats={kpis} />
 
+          {/* VisitasFilters debe leer/escribir q, estado, desde, hasta, etc. */}
           <VisitasFilters value={filters} onChange={setFilters} />
 
           <VisitasTable
@@ -191,7 +204,6 @@ export default function VisitasPage() {
             onUpdated={updateFromDrawer}
           />
 
-          {/* Modal asignar técnico */}
           <AsignarTecnicoModal
             open={asignarOpen}
             visita={visitaAsignar}
@@ -203,5 +215,6 @@ export default function VisitasPage() {
     </div>
   );
 }
+
 
 

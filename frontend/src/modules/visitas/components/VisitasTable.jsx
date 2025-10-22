@@ -1,21 +1,12 @@
 import { useMemo } from "react";
 
-// Mapeo del estado numérico a texto
-const STATUS = {
-  1: "Programada",
-  2: "En progreso",
-  3: "Completada",
-  4: "Cancelada",
-  5: "Pendiente",
-};
-
 export default function VisitasTable({
   items,
   meta,
   loading,
   onOpenDetail,
   onPageChange,
-  onAssignTecnico, 
+  onAssignTecnico,
 }) {
   const rows = useMemo(() => items || [], [items]);
 
@@ -29,8 +20,8 @@ export default function VisitasTable({
             <th>Título</th>
             <th>Estado</th>
             <th>Técnico</th>
-            <th>Observaciones</th>
-            <th className="tright">Acciones</th> 
+            <th>Descripción</th>
+            <th className="tright">Acciones</th>
           </tr>
         </thead>
 
@@ -57,17 +48,26 @@ export default function VisitasTable({
                 <td>{formatDate(v.programada_inicio)}</td>
                 <td>{v.cliente_nombre || `#${v.cliente_id}`}</td>
                 <td>{v.titulo || "—"}</td>
+
+                {/* Estado visual con color dinámico */}
                 <td>
                   <span
-                    className={`tag estado-${(STATUS[v.status_id] || "")
-                      .toLowerCase()
-                      .replace(/\s/g, "-")}`}
+                    className="tag"
+                    style={{
+                      backgroundColor: v.status_color || "#ddd",
+                      color: "#fff",
+                      fontWeight: 500,
+                      borderRadius: "8px",
+                      padding: "3px 8px",
+                    }}
                   >
-                    {STATUS[v.status_id] || "—"}
+                    {v.estado_label || v.status_etiqueta || "—"}
                   </span>
                 </td>
-                <td>{v.tecnico || v.tecnico_nombre || "Sin asignar"}</td>
+
+                <td>{v.tecnico_nombre || "Sin asignar"}</td>
                 <td className="ellipsis">{v.descripcion || "—"}</td>
+
                 <td className="tright">
                   <button
                     className="btn small"
@@ -77,7 +77,8 @@ export default function VisitasTable({
                   </button>
                   <button
                     className="btn small assign"
-                    onClick={() => onAssignTecnico?.(v)}>
+                    onClick={() => onAssignTecnico?.(v)}
+                  >
                     Asignar
                   </button>
                 </td>
@@ -86,7 +87,7 @@ export default function VisitasTable({
         </tbody>
       </table>
 
-      {/* paginación */}
+      {/* Paginación */}
       <div className="pagination">
         <button
           className="btn small ghost"
@@ -97,12 +98,13 @@ export default function VisitasTable({
         </button>
 
         <span>
-          Página {meta.page} de {meta.totalPages || 1}
+          Página {meta.page} de{" "}
+          {meta.totalPages || Math.ceil(meta.total / meta.pageSize) || 1}
         </span>
 
         <button
           className="btn small ghost"
-          disabled={meta.page >= (meta.totalPages || 1)}
+          disabled={meta.page >= (meta.totalPages || Math.ceil(meta.total / meta.pageSize) || 1)}
           onClick={() => onPageChange(meta.page + 1)}
         >
           Siguiente
@@ -112,14 +114,15 @@ export default function VisitasTable({
   );
 }
 
-// ======= Helpers =======
+/* ===== Helpers ===== */
 function formatDate(s) {
   if (!s) return "-";
   const d = new Date(s);
   return (
-    d.toLocaleDateString() +
+    d.toLocaleDateString("es-GT", { day: "2-digit", month: "2-digit", year: "numeric" }) +
     " " +
     d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   );
 }
+
 
