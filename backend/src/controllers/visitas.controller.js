@@ -482,7 +482,7 @@ export async function getPdf(req, res, next) {
     const id = Number(req.params.id);
     const selectNorm = buildSelectNormalizado();
 
-    // 1) Traer cabecera de la visita
+    // 1) Cabecera principal de la visita
     const { rows } = await query(
       `
       SELECT ${selectNorm}
@@ -501,17 +501,17 @@ export async function getPdf(req, res, next) {
     if (!rows[0]) return res.status(404).json({ error: 'Visita no encontrada' });
     const v = rows[0];
 
-    // 2) Datos auxiliares (observaciones públicas y evidencias)
+    // 2) Observaciones visibles para cliente (sin created_at)
     const { rows: observaciones } = await query(
-      `SELECT o.id, o.contenido, o.visibilidad, u.nombre_completo AS autor, o.created_at
+      `SELECT o.id, o.contenido, o.visibilidad, u.nombre_completo AS autor
          FROM visita_observaciones o
          JOIN usuarios u ON u.id = o.usuario_id
         WHERE o.visibilidad IN ('publico','cliente') AND o.visita_id = $1
-        ORDER BY o.id ASC
-      `,
+        ORDER BY o.id ASC`,
       [id]
     );
 
+    // 3) Evidencias
     const { rows: evidencias } = await query(
       `SELECT archivo_url, descripcion
          FROM evidencias
@@ -521,26 +521,27 @@ export async function getPdf(req, res, next) {
       [id]
     );
 
-    // 3) Headers de respuesta
+    // 4) Configurar headers HTTP
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="Visita_${id}.pdf"`);
 
-    // 4) Crear y streamear PDF
+    // 5) Crear PDF y streamear respuesta
     const doc = new PDFDocument({
       size: 'A4',
       margins: { top: 40, left: 40, right: 40, bottom: 40 }
     });
     doc.pipe(res);
 
-    // Helper de fecha (zona GT)
     const fmtDate = (d) => {
       if (!d) return '-';
       try {
         return new Date(d).toLocaleString('es-GT', { timeZone: 'America/Guatemala' });
-      } catch { return String(d); }
+      } catch {
+        return String(d);
+      }
     };
 
-    // Título
+    // Encabezado principal
     doc.fontSize(18).text('Reporte de Visita', { align: 'center' });
     doc.moveDown(0.5);
     doc.fontSize(10)
@@ -550,71 +551,68 @@ export async function getPdf(req, res, next) {
       .text(`Ejecutada:  ${fmtDate(v.real_inicio)} — ${fmtDate(v.real_fin)}`, { align: 'center' })
       .moveDown();
 
-    // Sección: Cliente
+    // --- CLIENTE ---
     sectionTitle(doc, 'Cliente');
     kv(doc, 'Nombre', v.cliente_nombre);
     kv(doc, 'Creada por', v.creado_por_nombre);
     doc.moveDown(0.3);
 
-    // Sección: Ubicación
+    // --- UBICACIÓN ---
     sectionTitle(doc, 'Ubicación');
     kv(doc, 'Etiqueta', v.ubicacion_etiqueta);
     kv(doc, 'Ciudad / Depto', `${v.ubicacion_ciudad ?? '-'} / ${v.ubicacion_departamento ?? '-'}`);
     doc.moveDown(0.3);
 
-    // Sección: Técnico
+    // --- TÉCNICO ---
     sectionTitle(doc, 'Técnico');
     kv(doc, 'Asignado', v.tecnico_nombre || '-');
     kv(doc, 'Tipo / Prioridad', `${v.type_etiqueta ?? '-'} / ${v.priority_etiqueta ?? '-'}`);
     doc.moveDown(0.5);
 
-    // Descripción y resultado
+    // --- DESCRIPCIÓN ---
     sectionTitle(doc, 'Descripción');
     paragraph(doc, v.descripcion || '-');
     doc.moveDown(0.3);
 
+    // --- RESULTADO / CIERRE ---
     sectionTitle(doc, 'Resultado / Cierre');
     paragraph(doc, v.estado_label ? `Estado final: ${v.estado_label}` : '-');
     doc.moveDown(0.5);
 
-    // Observaciones públicas
+    // --- OBSERVACIONES PÚBLICAS ---
     if (observaciones.length) {
       sectionTitle(doc, 'Observaciones visibles para cliente');
       observaciones.forEach(o => {
-        doc.fontSize(10).text(`• ${o.autor} — ${fmtDate(o.created_at)}`);
+        doc.fontSize(10).text(`• ${o.autor}`);
         paragraph(doc, o.contenido || '');
         doc.moveDown(0.2);
       });
       doc.moveDown(0.5);
     }
 
-    // Evidencias (dos columnas)
+    // --- EVIDENCIAS ---
     if (evidencias.length) {
       doc.addPage();
       sectionTitle(doc, 'Evidencias fotográficas');
 
-      const maxW = 240; // 2 columnas
+      const maxW = 240; // dos columnas
       const maxH = 160;
       let x = doc.page.margins.left;
       let y = doc.y;
 
       for (const ev of evidencias) {
         try {
-          // Cargar imagen (URL pública o firmada)
           const resp = await fetch(ev.archivo_url);
           const buf = Buffer.from(await resp.arrayBuffer());
           doc.image(buf, x, y, { fit: [maxW, maxH], align: 'center', valign: 'center' });
           doc.fontSize(9).text(ev.descripcion || '', x, y + maxH + 4, { width: maxW });
 
-          // 2 columnas
-          if (x === doc.page.margins.left) {
-            x += maxW + 20;
-          } else {
+          if (x === doc.page.margins.left) x += maxW + 20;
+          else {
             x = doc.page.margins.left;
             y += maxH + 40;
           }
 
-          // Salto si no hay espacio
           if (y + maxH + 60 > doc.page.height - doc.page.margins.bottom) {
             doc.addPage();
             x = doc.page.margins.left;
@@ -622,21 +620,22 @@ export async function getPdf(req, res, next) {
           }
         } catch {
           doc.fontSize(10).text(`(No se pudo cargar imagen) ${ev.descripcion || ''}`, { width: maxW });
-          // avanzar como si fuera una imagen
           if (x === doc.page.margins.left) x += maxW + 20;
           else { x = doc.page.margins.left; y += maxH + 40; }
         }
       }
     }
 
-    // Pie
+    // --- PIE DE PÁGINA ---
     doc.moveDown(1);
     doc.fontSize(9).text('Generado por Proyecto Área 3', { align: 'center' });
-
     doc.end();
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('Error generando PDF:', e);
+    next(e);
+  }
 
-  // ==== helpers de formato para el PDF ====
+  // Helpers internos
   function sectionTitle(doc, text) {
     doc.moveDown(0.2);
     doc.fontSize(12).text(text, { underline: true });
@@ -648,3 +647,4 @@ export async function getPdf(req, res, next) {
     doc.fontSize(10).text(text, { align: 'justify' });
   }
 }
+
