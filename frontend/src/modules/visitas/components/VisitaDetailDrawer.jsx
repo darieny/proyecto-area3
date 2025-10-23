@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { visitasApi } from "../../../services/visitas.api.js";
+import { api } from "../../../services/http.js";
 import "../css/visitas.css";
 
 const STATUS = {
@@ -15,19 +16,27 @@ function fmt(iso) {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return (
+      d.toLocaleDateString() +
+      " " +
+      d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
   } catch {
     return "—";
   }
 }
 
-export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated }) {
+export default function VisitaDetailDrawer({
+  open,
+  onClose,
+  visita,
+  onUpdated,
+}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [estado, setEstado] = useState(1);
   const [saving, setSaving] = useState(false);
-
 
   useEffect(() => {
     if (!open) return;
@@ -37,7 +46,6 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
       document.body.style.overflow = prev;
     };
   }, [open]);
-
 
   useEffect(() => {
     if (!open || !visita) return;
@@ -54,7 +62,10 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
         setData(full ?? null);
         if (full?.status_id != null) setEstado(Number(full.status_id));
       } catch (e) {
-        console.error("No se pudo cargar detalle de visita", e?.response?.data || e);
+        console.error(
+          "No se pudo cargar detalle de visita",
+          e?.response?.data || e
+        );
       } finally {
         if (alive) setLoading(false);
       }
@@ -84,9 +95,31 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
     }
   }
 
+  // Descarga del PDF con Bearer token (blob)
+  async function descargarPdf(id) {
+    try {
+      const res = await api.get(`/visitas/${id}/pdf`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Visita_${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error al descargar PDF:", err?.response?.data || err);
+      alert("No se pudo generar el PDF de la visita.");
+    }
+  }
+
   const clienteNombre = useMemo(() => {
     if (!data) return "—";
-    return data.cliente_nombre ?? (data.cliente_id ? `Cliente #${data.cliente_id}` : "—");
+    return (
+      data.cliente_nombre ??
+      (data.cliente_id ? `Cliente #${data.cliente_id}` : "—")
+    );
   }, [data]);
 
   if (!open) return null;
@@ -96,7 +129,9 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
       <div className="drawer__panel">
         <header className="drawer__header">
           <h3>Visita</h3>
-          <button className="btn-icon" onClick={onClose} aria-label="Cerrar">✕</button>
+          <button className="btn-icon" onClick={onClose} aria-label="Cerrar">
+            ✕
+          </button>
         </header>
 
         <div className="drawer__body">
@@ -111,7 +146,9 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
 
               <div className="v-item">
                 <div className="label">Título</div>
-                <div className="value"><b>{data?.titulo ?? "—"}</b></div>
+                <div className="value">
+                  <b>{data?.titulo ?? "—"}</b>
+                </div>
               </div>
 
               <div className="v-item">
@@ -140,7 +177,10 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
               <div className="v-item">
                 <div className="label">Ubicación</div>
                 <div className="value">
-                  {data?.ubicacion_etiqueta ?? data?.direccion ?? data?.direccion_linea1 ?? "—"}
+                  {data?.ubicacion_etiqueta ??
+                    data?.direccion ??
+                    data?.direccion_linea1 ??
+                    "—"}
                 </div>
               </div>
 
@@ -154,7 +194,9 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
                     disabled={saving}
                   >
                     {Object.entries(STATUS).map(([id, label]) => (
-                      <option key={id} value={id}>{label}</option>
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -162,14 +204,29 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
 
               <div className="v-item">
                 <div className="label">Observaciones</div>
-                <div className="value">{data?.descripcion ?? data?.observaciones ?? "—"}</div>
+                <div className="value">
+                  {data?.descripcion ?? data?.observaciones ?? "—"}
+                </div>
               </div>
             </div>
           )}
         </div>
 
         <footer className="drawer__footer">
-          <button className="btn ghost" onClick={onClose}>Cerrar</button>
+          <button className="btn ghost" onClick={onClose}>
+            Cerrar
+          </button>
+
+          {data?.id && (
+            <button
+              className="btn"
+              onClick={() => descargarPdf(data.id)}
+              disabled={loading}
+            >
+              Descargar PDF
+            </button>
+          )}
+
           <button
             className="btn primary"
             onClick={guardarEstado}
@@ -185,5 +242,4 @@ export default function VisitaDetailDrawer({ open, onClose, visita, onUpdated })
     document.body
   );
 }
-
 

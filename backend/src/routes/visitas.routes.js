@@ -13,6 +13,9 @@ r.use(requireAuth, requireRole(['admin']));
 r.get('/', ctrl.list);
 r.get('/:id', ctrl.getOne);
 
+// === PDF de la visita ===
+r.get('/:id/pdf', ctrl.getPdf);
+
 // Update genérico (campos editables)
 r.put('/:id', ctrl.updateOne);
 
@@ -29,7 +32,6 @@ r.post('/:id/evidencias', ctrl.postEvidencia);
 
 // Logs
 r.get('/:id/logs', ctrl.getLogs);
-
 r.patch('/:id/tecnico', ctrl.assignTecnico);
 
 export default r;

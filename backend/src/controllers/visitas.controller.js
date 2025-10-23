@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import PDFDocument from 'pdfkit';
 
 /** =========================
  *   LEAN (sin servicios)
@@ -468,4 +469,182 @@ export async function assignTecnico(req, res, next) {
 
     res.json(full[0] || { ok: true });
   } catch (e) { next(e); }
+}
+
+
+
+/** =========================
+ * PDF de la visita (ADMIN)
+ * GET /visitas/:id/pdf
+ * ========================= */
+export async function getPdf(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const selectNorm = buildSelectNormalizado();
+
+    // 1) Traer cabecera de la visita
+    const { rows } = await query(
+      `
+      SELECT ${selectNorm}
+      FROM visitas v
+      JOIN clientes c        ON c.id = v.cliente_id
+      LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+      LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu        ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s  ON s.id  = v.status_id
+      LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+      LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+      WHERE v.id = $1
+      `,
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Visita no encontrada' });
+    const v = rows[0];
+
+    // 2) Datos auxiliares (observaciones públicas y evidencias)
+    const { rows: observaciones } = await query(
+      `SELECT o.id, o.contenido, o.visibilidad, u.nombre_completo AS autor, o.created_at
+         FROM visita_observaciones o
+         JOIN usuarios u ON u.id = o.usuario_id
+        WHERE o.visibilidad IN ('publico','cliente') AND o.visita_id = $1
+        ORDER BY o.id ASC
+      `,
+      [id]
+    );
+
+    const { rows: evidencias } = await query(
+      `SELECT archivo_url, descripcion
+         FROM evidencias
+        WHERE visita_id = $1
+        ORDER BY id ASC
+        LIMIT 6`,
+      [id]
+    );
+
+    // 3) Headers de respuesta
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Visita_${id}.pdf"`);
+
+    // 4) Crear y streamear PDF
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 40, left: 40, right: 40, bottom: 40 }
+    });
+    doc.pipe(res);
+
+    // Helper de fecha (zona GT)
+    const fmtDate = (d) => {
+      if (!d) return '-';
+      try {
+        return new Date(d).toLocaleString('es-GT', { timeZone: 'America/Guatemala' });
+      } catch { return String(d); }
+    };
+
+    // Título
+    doc.fontSize(18).text('Reporte de Visita', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10)
+      .text(`ID: ${id}`, { align: 'center' })
+      .text(`Estado: ${v.estado_label ?? v.estado_codigo ?? '-'}`, { align: 'center' })
+      .text(`Programada: ${fmtDate(v.programada_inicio)} — ${fmtDate(v.programada_fin)}`, { align: 'center' })
+      .text(`Ejecutada:  ${fmtDate(v.real_inicio)} — ${fmtDate(v.real_fin)}`, { align: 'center' })
+      .moveDown();
+
+    // Sección: Cliente
+    sectionTitle(doc, 'Cliente');
+    kv(doc, 'Nombre', v.cliente_nombre);
+    kv(doc, 'Creada por', v.creado_por_nombre);
+    doc.moveDown(0.3);
+
+    // Sección: Ubicación
+    sectionTitle(doc, 'Ubicación');
+    kv(doc, 'Etiqueta', v.ubicacion_etiqueta);
+    kv(doc, 'Ciudad / Depto', `${v.ubicacion_ciudad ?? '-'} / ${v.ubicacion_departamento ?? '-'}`);
+    doc.moveDown(0.3);
+
+    // Sección: Técnico
+    sectionTitle(doc, 'Técnico');
+    kv(doc, 'Asignado', v.tecnico_nombre || '-');
+    kv(doc, 'Tipo / Prioridad', `${v.type_etiqueta ?? '-'} / ${v.priority_etiqueta ?? '-'}`);
+    doc.moveDown(0.5);
+
+    // Descripción y resultado
+    sectionTitle(doc, 'Descripción');
+    paragraph(doc, v.descripcion || '-');
+    doc.moveDown(0.3);
+
+    sectionTitle(doc, 'Resultado / Cierre');
+    paragraph(doc, v.estado_label ? `Estado final: ${v.estado_label}` : '-');
+    doc.moveDown(0.5);
+
+    // Observaciones públicas
+    if (observaciones.length) {
+      sectionTitle(doc, 'Observaciones visibles para cliente');
+      observaciones.forEach(o => {
+        doc.fontSize(10).text(`• ${o.autor} — ${fmtDate(o.created_at)}`);
+        paragraph(doc, o.contenido || '');
+        doc.moveDown(0.2);
+      });
+      doc.moveDown(0.5);
+    }
+
+    // Evidencias (dos columnas)
+    if (evidencias.length) {
+      doc.addPage();
+      sectionTitle(doc, 'Evidencias fotográficas');
+
+      const maxW = 240; // 2 columnas
+      const maxH = 160;
+      let x = doc.page.margins.left;
+      let y = doc.y;
+
+      for (const ev of evidencias) {
+        try {
+          // Cargar imagen (URL pública o firmada)
+          const resp = await fetch(ev.archivo_url);
+          const buf = Buffer.from(await resp.arrayBuffer());
+          doc.image(buf, x, y, { fit: [maxW, maxH], align: 'center', valign: 'center' });
+          doc.fontSize(9).text(ev.descripcion || '', x, y + maxH + 4, { width: maxW });
+
+          // 2 columnas
+          if (x === doc.page.margins.left) {
+            x += maxW + 20;
+          } else {
+            x = doc.page.margins.left;
+            y += maxH + 40;
+          }
+
+          // Salto si no hay espacio
+          if (y + maxH + 60 > doc.page.height - doc.page.margins.bottom) {
+            doc.addPage();
+            x = doc.page.margins.left;
+            y = doc.y;
+          }
+        } catch {
+          doc.fontSize(10).text(`(No se pudo cargar imagen) ${ev.descripcion || ''}`, { width: maxW });
+          // avanzar como si fuera una imagen
+          if (x === doc.page.margins.left) x += maxW + 20;
+          else { x = doc.page.margins.left; y += maxH + 40; }
+        }
+      }
+    }
+
+    // Pie
+    doc.moveDown(1);
+    doc.fontSize(9).text('Generado por Proyecto Área 3', { align: 'center' });
+
+    doc.end();
+  } catch (e) { next(e); }
+
+  // ==== helpers de formato para el PDF ====
+  function sectionTitle(doc, text) {
+    doc.moveDown(0.2);
+    doc.fontSize(12).text(text, { underline: true });
+  }
+  function kv(doc, k, v) {
+    doc.fontSize(10).text(`${k}: ${v ?? '-'}`);
+  }
+  function paragraph(doc, text) {
+    doc.fontSize(10).text(text, { align: 'justify' });
+  }
 }
