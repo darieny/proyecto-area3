@@ -45,7 +45,7 @@ export function useSupervisorVisitas({ page=1, search='', status_codigo='' } = {
   async function descargarPdf(visitaId) {
     try {
       const { data } = await api.get(`/visitas/${visitaId}/pdf`, {
-        responseType: 'blob', // recibe archivo binario
+        responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([data]));
       const a = document.createElement('a');

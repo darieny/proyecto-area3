@@ -89,7 +89,7 @@ export async function list(req, res, next) {
       where.push(`(v.titulo ILIKE $${params.length} OR v.descripcion ILIKE $${params.length})`);
     }
     if (filters.status_id) { params.push(filters.status_id); where.push(`v.status_id = $${params.length}`); }
-    if (filters.estado)    { params.push(filters.estado);    where.push(`s.codigo = $${params.length}`); } // NUEVO
+    if (filters.estado) { params.push(filters.estado); where.push(`s.codigo = $${params.length}`); } // NUEVO
     if (filters.priority_id) { params.push(filters.priority_id); where.push(`v.priority_id = $${params.length}`); }
     if (filters.type_id) { params.push(filters.type_id); where.push(`v.type_id = $${params.length}`); }
     if (filters.cliente_id) { params.push(filters.cliente_id); where.push(`v.cliente_id = $${params.length}`); }
@@ -497,11 +497,11 @@ export async function getPdf(req, res, next) {
       const { rows } = await query(
         `
         SELECT 1
-        FROM visitas v
-        JOIN usuarios t ON t.id = v.tecnico_asignado_id
-        WHERE v.id = $1
-          AND t.supervisor_id = $2
-        LIMIT 1
+    FROM visitas v
+    JOIN tecnicos t ON t.usuario_id = v.tecnico_asignado_id
+    WHERE v.id = $1
+      AND t.supervisor_id = $2
+    LIMIT 1
         `,
         [id, req.user.id]
       );
