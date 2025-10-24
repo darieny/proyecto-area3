@@ -474,12 +474,44 @@ export async function assignTecnico(req, res, next) {
 
 
 /** =========================
- * PDF de la visita (ADMIN)
- * GET /visitas/:id/pdf
+ * PDF de la visita (ADMIN / SUPERVISOR / TÉCNICO)
  * ========================= */
 export async function getPdf(req, res, next) {
   try {
     const id = Number(req.params.id);
+    const rol = String(req.user?.rol || req.user?.rol_nombre || '').toLowerCase();
+
+    // === AUTORIZACIÓN SEGÚN ROL ===
+    if (rol === 'admin') {
+      // puede ver cualquier visita
+    } else if (rol === 'tecnico') {
+      // sólo si es el técnico asignado
+      const { rows } = await query(
+        `SELECT 1 FROM visitas WHERE id=$1 AND tecnico_asignado_id=$2 LIMIT 1`,
+        [id, req.user.id]
+      );
+      if (!rows.length)
+        return res.status(403).json({ error: 'No autorizado para esta visita' });
+    } else if (rol === 'supervisor') {
+      // sólo si pertenece a un técnico de su equipo
+      const { rows } = await query(
+        `
+        SELECT 1
+        FROM visitas v
+        JOIN usuarios t ON t.id = v.tecnico_asignado_id
+        WHERE v.id = $1
+          AND t.supervisor_id = $2
+        LIMIT 1
+        `,
+        [id, req.user.id]
+      );
+      if (!rows.length)
+        return res.status(403).json({ error: 'No autorizado para esta visita' });
+    } else {
+      return res.status(403).json({ error: 'Rol no autorizado' });
+    }
+
+    // === Si pasó la validación, continúa con el PDF ===
     const selectNorm = buildSelectNormalizado();
 
     // 1) Cabecera principal de la visita
@@ -501,13 +533,13 @@ export async function getPdf(req, res, next) {
     if (!rows[0]) return res.status(404).json({ error: 'Visita no encontrada' });
     const v = rows[0];
 
-    // 2) Observaciones visibles para cliente (sin created_at)
+    // 2) Observaciones visibles para cliente
     const { rows: observaciones } = await query(
       `SELECT o.id, o.contenido, o.visibilidad, u.nombre_completo AS autor
-         FROM visita_observaciones o
-         JOIN usuarios u ON u.id = o.usuario_id
-        WHERE o.visibilidad IN ('publico','cliente') AND o.visita_id = $1
-        ORDER BY o.id ASC`,
+       FROM visita_observaciones o
+       JOIN usuarios u ON u.id = o.usuario_id
+       WHERE o.visibilidad IN ('publico','cliente') AND o.visita_id = $1
+       ORDER BY o.id ASC`,
       [id]
     );
 
@@ -521,11 +553,11 @@ export async function getPdf(req, res, next) {
       [id]
     );
 
-    // 4) Configurar headers HTTP
+    // 4) Headers PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="Visita_${id}.pdf"`);
 
-    // 5) Crear PDF y streamear respuesta
+    // 5) Generar PDF (idéntico a tu lógica anterior)
     const doc = new PDFDocument({
       size: 'A4',
       margins: { top: 40, left: 40, right: 40, bottom: 40 }
@@ -579,7 +611,7 @@ export async function getPdf(req, res, next) {
     paragraph(doc, v.estado_label ? `Estado final: ${v.estado_label}` : '-');
     doc.moveDown(0.5);
 
-    // --- OBSERVACIONES PÚBLICAS ---
+    // --- OBSERVACIONES ---
     if (observaciones.length) {
       sectionTitle(doc, 'Observaciones visibles para cliente');
       observaciones.forEach(o => {
@@ -595,7 +627,7 @@ export async function getPdf(req, res, next) {
       doc.addPage();
       sectionTitle(doc, 'Evidencias fotográficas');
 
-      const maxW = 240; // dos columnas
+      const maxW = 240;
       const maxH = 160;
       let x = doc.page.margins.left;
       let y = doc.y;
@@ -626,10 +658,11 @@ export async function getPdf(req, res, next) {
       }
     }
 
-    // --- PIE DE PÁGINA ---
+    // --- PIE ---
     doc.moveDown(1);
     doc.fontSize(9).text('Generado por Proyecto Área 3', { align: 'center' });
     doc.end();
+
   } catch (e) {
     console.error('Error generando PDF:', e);
     next(e);
@@ -647,4 +680,5 @@ export async function getPdf(req, res, next) {
     doc.fontSize(10).text(text, { align: 'justify' });
   }
 }
+
 
