@@ -6,15 +6,16 @@ const r = Router();
 
 r.get('/ping', (_req, res) => res.json({ ok: true, route: '/visitas/ping' }));
 
+// === PDF de la visita ===
+// Solo requiere estar autenticado (admin, supervisor o técnico)
+r.get('/:id/pdf', ctrl.getPdf);
+
 // Por ahora, todo sólo admin
 r.use(requireAuth, requireRole(['admin']));
 
 // Lista general + detalle
 r.get('/', ctrl.list);
 r.get('/:id', ctrl.getOne);
-
-// === PDF de la visita ===
-r.get('/:id/pdf', ctrl.getPdf);
 
 // Update genérico (campos editables)
 r.put('/:id', ctrl.updateOne);
