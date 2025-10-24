@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../services/http';
 
 export function useSupervisorDashboard() {
-  const [kpis, setKpis] = useState({});
-  const [trend, setTrend] = useState([]);
+  const [summary, setSummary] = useState({ kpis: {}, trend: [] });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
@@ -13,16 +12,16 @@ export function useSupervisorDashboard() {
       try {
         const res = await api.get('/supervisor/dashboard/summary');
         if (!alive) return;
-        setKpis(res.data.kpis);
-        setTrend(res.data.trend);
+        setSummary(res.data || { kpis: {}, trend: [] });
       } catch (e) {
         setErr('No se pudo cargar el dashboard');
       } finally {
         setLoading(false);
       }
     })();
-    return () => (alive = false);
+    return () => { alive = false; };
   }, []);
 
-  return { kpis, trend, loading, err };
+  return { summary, loading, err };
 }
+
