@@ -9,6 +9,7 @@ export default function Sidebar({ collapsed, onNavigate }) {
 
   const linkClass = ({ isActive }) => `sb__item ${isActive ? 'active' : ''}`;
 
+  // === ADMIN ===
   const adminItems = (
     <>
       <NavLink to="/dashboard" className={linkClass} onClick={onNavigate}>
@@ -33,6 +34,27 @@ export default function Sidebar({ collapsed, onNavigate }) {
     </>
   );
 
+  // === SUPERVISOR ===
+  const supervisorItems = (
+    <>
+      <NavLink to="/supervisor" className={linkClass} onClick={onNavigate}>
+        <span className="dot" />
+        <span className="sb__text">Dashboard</span>
+      </NavLink>
+
+      <NavLink to="/supervisor/usuarios" className={linkClass} onClick={onNavigate}>
+        <span className="ico">👥</span>
+        <span className="sb__text">Usuarios</span>
+      </NavLink>
+
+      <NavLink to="/supervisor/visitas" className={linkClass} onClick={onNavigate}>
+        <span className="ico">📋</span>
+        <span className="sb__text">Visitas / Reportes</span>
+      </NavLink>
+    </>
+  );
+
+  // === TÉCNICO ===
   const tecnicoItems = (
     <>
       <NavLink to="/tecnico" className={linkClass} onClick={onNavigate}>
@@ -46,13 +68,19 @@ export default function Sidebar({ collapsed, onNavigate }) {
     </>
   );
 
+  // === Selección del menú según rol ===
+  const menuItems =
+    rol === 'admin' ? adminItems :
+    rol === 'supervisor' ? supervisorItems :
+    tecnicoItems;
+
   return (
     <aside className="sb" aria-label="Menú lateral">
       <div className="sb__logo">{collapsed ? 'L' : 'logo'}</div>
 
       <nav className="sb__section">
         <div className="sb__title">MENÚ</div>
-        {rol === 'tecnico' ? tecnicoItems : adminItems}
+        {menuItems}
       </nav>
 
       <nav className="sb__section mt">

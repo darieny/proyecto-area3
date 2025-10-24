@@ -9,6 +9,7 @@ import UsuariosPage from './modules/usuarios/pages/UsuariosPage';
 import TecnicoHome from './modules/tecnico/pages/TecnicoHome';
 import TecnicoDetalle from './modules/tecnico/pages/TecnicoDetalle';
 import SupervisorHome from './modules/supervisor/pages/SupervisorHome';
+import SupervisorUsuarios from './modules/supervisor/pages/SupervisorUsuarios';
 
 // Páginas base
 import Login from './pages/Login';
@@ -90,6 +91,15 @@ export default function App() {
               element={
                 <RequireRole role="supervisor">
                   <SupervisorHome />
+                </RequireRole>
+              }
+            />
+
+            <Route
+              path="/supervisor/usuarios"
+              element={
+                <RequireRole role="supervisor">
+                  <SupervisorUsuarios />
                 </RequireRole>
               }
             />
