@@ -10,6 +10,7 @@ import TecnicoHome from './modules/tecnico/pages/TecnicoHome';
 import TecnicoDetalle from './modules/tecnico/pages/TecnicoDetalle';
 import SupervisorHome from './modules/supervisor/pages/SupervisorHome';
 import SupervisorUsuarios from './modules/supervisor/pages/SupervisorUsuarios';
+import SupervisorVisitas from './modules/supervisor/pages/SupervisorVisitas';
 
 // Páginas base
 import Login from './pages/Login';
@@ -100,6 +101,14 @@ export default function App() {
               element={
                 <RequireRole role="supervisor">
                   <SupervisorUsuarios />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/supervisor/visitas"
+              element={
+                <RequireRole role="supervisor">
+                  <SupervisorVisitas />
                 </RequireRole>
               }
             />
