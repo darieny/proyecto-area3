@@ -1,23 +1,46 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
+import Sidebar from '../../dashboard/components/Sidebar';
+import Topbar from '../../dashboard/components/Topbar';
+import KpiCard from '../../dashboard/components/KpiCard';
+import MiniTrend from '../../dashboard/components/MiniTrend';
 import { useSupervisorDashboard } from '../hooks/useSupervisorDashboard';
+import '../../dashboard/css/Dashboard.css';
 
 export default function SupervisorHome() {
-  const { kpis, trend, loading, err } = useSupervisorDashboard();
+  const { summary, loading, err } = useSupervisorDashboard();
+  const k = summary?.kpis ?? {};
 
-  useEffect(() => {
-    console.log('Datos del dashboard:', { kpis, trend });
-  }, [kpis, trend]);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (loading) return <p>Cargando dashboard...</p>;
-  if (err) return <p>Error: {err}</p>;
+  if (loading) return <div>Cargando...</div>;
+  if (err) return <div>Error: {err}</div>;
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Dashboard Supervisor</h1>
-      <p>Total de visitas de tu equipo: {kpis.total}</p>
-      <p>Pendientes: {kpis.pendientes}</p>
-      <p>En curso: {kpis.en_curso}</p>
-      <p>Completadas: {kpis.completadas}</p>
+    <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={() => setMobileOpen(false)}
+      />
+      <main className="main">
+        <Topbar onToggleMenu={() => setMobileOpen(!mobileOpen)} />
+
+        <div className="dash">
+          <h1 className="dash__title">Dashboard del Supervisor</h1>
+
+          <section className="dash__kpis">
+            <KpiCard title="Total de visitas" value={k.total || 0} />
+            <KpiCard title="Pendientes" value={k.pendientes || 0} />
+            <KpiCard title="En curso" value={k.en_curso || 0} />
+            <KpiCard title="Completadas" value={k.completadas || 0} />
+          </section>
+
+          <section className="dash__trend">
+            <MiniTrend data={summary.trend || []} />
+          </section>
+        </div>
+      </main>
     </div>
   );
 }
+
