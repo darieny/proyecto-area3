@@ -11,6 +11,7 @@ import ubicacionesRoutes from './routes/ubicaciones.routes.js';
 import visitasRoutes from './routes/visitas.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
 import tecnicoRoutes from './routes/tecnico.routes.js';
+import supervisorRoutes from './routes/supervisor.routes.js';
 
 
 const app = express();
@@ -55,6 +56,8 @@ app.use('/api/ubicaciones', ubicacionesRoutes);
 app.use('/api/visitas', visitasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/tecnico', tecnicoRoutes);
+app.use('/api/supervisor', supervisorRoutes);
+
 
 export default app;
 
