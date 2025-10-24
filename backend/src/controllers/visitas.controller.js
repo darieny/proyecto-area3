@@ -481,6 +481,13 @@ export async function getPdf(req, res, next) {
     const id = Number(req.params.id);
     const rol = String(req.user?.rol || req.user?.rol_nombre || '').toLowerCase();
 
+        console.log('GET /visitas/:id/pdf DEBUG', {
+      visitaId: id,
+      userId: req.user?.id,
+      rol,
+    });
+
+
     // === AUTORIZACIÓN SEGÚN ROL ===
     if (rol === 'admin') {
       // puede ver cualquier visita
