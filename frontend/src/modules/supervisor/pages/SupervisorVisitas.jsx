@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Sidebar from '../../dashboard/components/Sidebar';
 import Topbar from '../../dashboard/components/Topbar';
 import { useSupervisorVisitas, VISITA_ESTADOS } from '../hooks/useSupervisorVisitas';
-import '../../visitas/css/Visitas.css';
+import '../../visitas/css/visitas.css';
 
 export default function SupervisorVisitas() {
   const [collapsed, setCollapsed] = useState(false);
