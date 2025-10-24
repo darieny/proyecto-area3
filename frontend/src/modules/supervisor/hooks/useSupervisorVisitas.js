@@ -42,5 +42,22 @@ export function useSupervisorVisitas({ page=1, search='', status_codigo='' } = {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [qp]);
 
-  return { items, meta, loading, err, reload: load };
+  async function descargarPdf(visitaId) {
+    try {
+      const { data } = await api.get(`/visitas/${visitaId}/pdf`, {
+        responseType: 'blob', // recibe archivo binario
+      });
+      const url = window.URL.createObjectURL(new Blob([data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `visita_${visitaId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Error al generar el PDF');
+      console.error(e);
+    }
+  }
+
+  return { items, meta, loading, err, reload: load, descargarPdf };
 }
