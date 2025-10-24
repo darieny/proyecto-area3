@@ -1,4 +1,3 @@
-// src/middleware/scope-supervisor.js
 import { query } from '../config/db.js';
 
 export async function withEquipoSupervisor(req, res, next) {

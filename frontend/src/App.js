@@ -8,6 +8,7 @@ import VisitasPage from './modules/visitas/pages/VisitasPage';
 import UsuariosPage from './modules/usuarios/pages/UsuariosPage';
 import TecnicoHome from './modules/tecnico/pages/TecnicoHome';
 import TecnicoDetalle from './modules/tecnico/pages/TecnicoDetalle';
+import SupervisorHome from './modules/supervisor/pages/SupervisorHome';
 
 // Páginas base
 import Login from './pages/Login';
@@ -83,9 +84,16 @@ export default function App() {
               }
             />
 
-            {/* placeholders para luego */}
-            {/* <Route path="/supervisor" element={<RequireRole role="supervisor"><SupervisorHome/></RequireRole>} /> */}
-            
+            {/* Supervisor */}
+            <Route
+              path="/supervisor"
+              element={
+                <RequireRole role="supervisor">
+                  <SupervisorHome />
+                </RequireRole>
+              }
+            />
+
             {/* Tecnico */}
             <Route
               path="/tecnico"
