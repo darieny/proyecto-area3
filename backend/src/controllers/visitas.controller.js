@@ -472,49 +472,98 @@ export async function assignTecnico(req, res, next) {
 }
 
 
-
 /** =========================
  * PDF de la visita (ADMIN / SUPERVISOR / TÉCNICO)
  * ========================= */
 export async function getPdf(req, res, next) {
   try {
     const id = Number(req.params.id);
+
+    // 1) Depuración inicial: qué viene desde requireAuth
+    console.log('serverless hit: GET /api/visitas/' + id + '/pdf');
+    console.log('getPdf user debug (antes fallback):', req.user);
+
+    // 2) Fallback: si req.user viene vacío en esta ruta, lo reconstruimos desde el token
+    if (!req.user || !req.user.id) {
+      try {
+        const authHeader = req.headers.authorization || '';
+        const rawToken = authHeader.startsWith('Bearer ')
+          ? authHeader.slice(7)
+          : null;
+
+        if (rawToken) {
+          // import dinámico para no crear dependencia circular arriba
+          const { verifyAccess } = await import('../utils/jwt.js');
+          const payload = verifyAccess(rawToken);
+
+          req.user = {
+            id:
+              payload.id ??
+              payload.user_id ??
+              payload.uid ??
+              payload.sub ??
+              null,
+            rol:
+              payload.rol ??
+              payload.role ??
+              payload.rol_nombre ??
+              payload.role_name ??
+              '',
+            ...payload,
+          };
+
+          console.log('getPdf fallback user (reconstruido del token):', req.user);
+        } else {
+          console.log('getPdf fallback: no había Authorization Bearer');
+        }
+      } catch (err) {
+        console.error('getPdf fallback error al decodificar token:', err);
+      }
+    }
+
+    // 3) Ya con req.user final, sacamos rol normalizado
     const rol = String(req.user?.rol || req.user?.rol_nombre || '').toLowerCase();
 
-        console.log('GET /visitas/:id/pdf DEBUG', {
+    console.log('GET /visitas/:id/pdf DEBUG', {
       visitaId: id,
       userId: req.user?.id,
       rol,
     });
 
-
     // === AUTORIZACIÓN SEGÚN ROL ===
     if (rol === 'admin') {
-      // puede ver cualquier visita
+      // admin puede ver cualquier visita
     } else if (rol === 'tecnico') {
       // sólo si es el técnico asignado
       const { rows } = await query(
-        `SELECT 1 FROM visitas WHERE id=$1 AND tecnico_asignado_id=$2 LIMIT 1`,
+        `SELECT 1
+           FROM visitas
+          WHERE id = $1
+            AND tecnico_asignado_id = $2
+          LIMIT 1`,
         [id, req.user.id]
       );
-      if (!rows.length)
+      if (!rows.length) {
         return res.status(403).json({ error: 'No autorizado para esta visita' });
+      }
     } else if (rol === 'supervisor') {
-      // sólo si pertenece a un técnico de su equipo
+      // sólo si la visita pertenece a un técnico de su equipo
       const { rows } = await query(
         `
         SELECT 1
-    FROM visitas v
-    JOIN tecnicos t ON t.usuario_id = v.tecnico_asignado_id
-    WHERE v.id = $1
-      AND t.supervisor_id = $2
-    LIMIT 1
+          FROM visitas v
+          JOIN tecnicos t ON t.usuario_id = v.tecnico_asignado_id
+         WHERE v.id = $1
+           AND t.supervisor_id = $2
+         LIMIT 1
         `,
         [id, req.user.id]
       );
-      if (!rows.length)
+      if (!rows.length) {
         return res.status(403).json({ error: 'No autorizado para esta visita' });
+      }
     } else {
+      // cualquier otro rol = prohibido
       return res.status(403).json({ error: 'Rol no autorizado' });
     }
 
@@ -525,15 +574,15 @@ export async function getPdf(req, res, next) {
     const { rows } = await query(
       `
       SELECT ${selectNorm}
-      FROM visitas v
-      JOIN clientes c        ON c.id = v.cliente_id
-      LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
-      LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
-      JOIN usuarios cu        ON cu.id = v.creado_por_id
-      LEFT JOIN catalogo_items s  ON s.id  = v.status_id
-      LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
-      LEFT JOIN catalogo_items ty ON ty.id = v.type_id
-      WHERE v.id = $1
+        FROM visitas v
+        JOIN clientes c         ON c.id = v.cliente_id
+        LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+        LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+        JOIN usuarios cu        ON cu.id = v.creado_por_id
+        LEFT JOIN catalogo_items s  ON s.id  = v.status_id
+        LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+        LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+       WHERE v.id = $1
       `,
       [id]
     );
@@ -543,10 +592,11 @@ export async function getPdf(req, res, next) {
     // 2) Observaciones visibles para cliente
     const { rows: observaciones } = await query(
       `SELECT o.id, o.contenido, o.visibilidad, u.nombre_completo AS autor
-       FROM visita_observaciones o
-       JOIN usuarios u ON u.id = o.usuario_id
-       WHERE o.visibilidad IN ('publico','cliente') AND o.visita_id = $1
-       ORDER BY o.id ASC`,
+         FROM visita_observaciones o
+         JOIN usuarios u ON u.id = o.usuario_id
+        WHERE o.visibilidad IN ('publico','cliente')
+          AND o.visita_id = $1
+        ORDER BY o.id ASC`,
       [id]
     );
 
@@ -564,17 +614,19 @@ export async function getPdf(req, res, next) {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="Visita_${id}.pdf"`);
 
-    // 5) Generar PDF (idéntico a tu lógica anterior)
+    // 5) Generar PDF
     const doc = new PDFDocument({
       size: 'A4',
-      margins: { top: 40, left: 40, right: 40, bottom: 40 }
+      margins: { top: 40, left: 40, right: 40, bottom: 40 },
     });
     doc.pipe(res);
 
     const fmtDate = (d) => {
       if (!d) return '-';
       try {
-        return new Date(d).toLocaleString('es-GT', { timeZone: 'America/Guatemala' });
+        return new Date(d).toLocaleString('es-GT', {
+          timeZone: 'America/Guatemala',
+        });
       } catch {
         return String(d);
       }
@@ -583,11 +635,21 @@ export async function getPdf(req, res, next) {
     // Encabezado principal
     doc.fontSize(18).text('Reporte de Visita', { align: 'center' });
     doc.moveDown(0.5);
-    doc.fontSize(10)
+    doc
+      .fontSize(10)
       .text(`ID: ${id}`, { align: 'center' })
-      .text(`Estado: ${v.estado_label ?? v.estado_codigo ?? '-'}`, { align: 'center' })
-      .text(`Programada: ${fmtDate(v.programada_inicio)} — ${fmtDate(v.programada_fin)}`, { align: 'center' })
-      .text(`Ejecutada:  ${fmtDate(v.real_inicio)} — ${fmtDate(v.real_fin)}`, { align: 'center' })
+      .text(
+        `Estado: ${v.estado_label ?? v.estado_codigo ?? '-'}`,
+        { align: 'center' }
+      )
+      .text(
+        `Programada: ${fmtDate(v.programada_inicio)} — ${fmtDate(v.programada_fin)}`,
+        { align: 'center' }
+      )
+      .text(
+        `Ejecutada:  ${fmtDate(v.real_inicio)} — ${fmtDate(v.real_fin)}`,
+        { align: 'center' }
+      )
       .moveDown();
 
     // --- CLIENTE ---
@@ -599,13 +661,21 @@ export async function getPdf(req, res, next) {
     // --- UBICACIÓN ---
     sectionTitle(doc, 'Ubicación');
     kv(doc, 'Etiqueta', v.ubicacion_etiqueta);
-    kv(doc, 'Ciudad / Depto', `${v.ubicacion_ciudad ?? '-'} / ${v.ubicacion_departamento ?? '-'}`);
+    kv(
+      doc,
+      'Ciudad / Depto',
+      `${v.ubicacion_ciudad ?? '-'} / ${v.ubicacion_departamento ?? '-'}`
+    );
     doc.moveDown(0.3);
 
     // --- TÉCNICO ---
     sectionTitle(doc, 'Técnico');
     kv(doc, 'Asignado', v.tecnico_nombre || '-');
-    kv(doc, 'Tipo / Prioridad', `${v.type_etiqueta ?? '-'} / ${v.priority_etiqueta ?? '-'}`);
+    kv(
+      doc,
+      'Tipo / Prioridad',
+      `${v.type_etiqueta ?? '-'} / ${v.priority_etiqueta ?? '-'}`
+    );
     doc.moveDown(0.5);
 
     // --- DESCRIPCIÓN ---
@@ -615,13 +685,16 @@ export async function getPdf(req, res, next) {
 
     // --- RESULTADO / CIERRE ---
     sectionTitle(doc, 'Resultado / Cierre');
-    paragraph(doc, v.estado_label ? `Estado final: ${v.estado_label}` : '-');
+    paragraph(
+      doc,
+      v.estado_label ? `Estado final: ${v.estado_label}` : '-'
+    );
     doc.moveDown(0.5);
 
     // --- OBSERVACIONES ---
     if (observaciones.length) {
       sectionTitle(doc, 'Observaciones visibles para cliente');
-      observaciones.forEach(o => {
+      observaciones.forEach((o) => {
         doc.fontSize(10).text(`• ${o.autor}`);
         paragraph(doc, o.contenido || '');
         doc.moveDown(0.2);
@@ -643,11 +716,18 @@ export async function getPdf(req, res, next) {
         try {
           const resp = await fetch(ev.archivo_url);
           const buf = Buffer.from(await resp.arrayBuffer());
-          doc.image(buf, x, y, { fit: [maxW, maxH], align: 'center', valign: 'center' });
-          doc.fontSize(9).text(ev.descripcion || '', x, y + maxH + 4, { width: maxW });
+          doc.image(buf, x, y, {
+            fit: [maxW, maxH],
+            align: 'center',
+            valign: 'center',
+          });
+          doc
+            .fontSize(9)
+            .text(ev.descripcion || '', x, y + maxH + 4, { width: maxW });
 
-          if (x === doc.page.margins.left) x += maxW + 20;
-          else {
+          if (x === doc.page.margins.left) {
+            x += maxW + 20;
+          } else {
             x = doc.page.margins.left;
             y += maxH + 40;
           }
@@ -658,24 +738,34 @@ export async function getPdf(req, res, next) {
             y = doc.y;
           }
         } catch {
-          doc.fontSize(10).text(`(No se pudo cargar imagen) ${ev.descripcion || ''}`, { width: maxW });
-          if (x === doc.page.margins.left) x += maxW + 20;
-          else { x = doc.page.margins.left; y += maxH + 40; }
+          doc
+            .fontSize(10)
+            .text(
+              `(No se pudo cargar imagen) ${ev.descripcion || ''}`,
+              { width: maxW }
+            );
+          if (x === doc.page.margins.left) {
+            x += maxW + 20;
+          } else {
+            x = doc.page.margins.left;
+            y += maxH + 40;
+          }
         }
       }
     }
 
     // --- PIE ---
     doc.moveDown(1);
-    doc.fontSize(9).text('Generado por Proyecto Área 3', { align: 'center' });
+    doc.fontSize(9).text('Generado por Proyecto Área 3', {
+      align: 'center',
+    });
     doc.end();
-
   } catch (e) {
     console.error('Error generando PDF:', e);
     next(e);
   }
 
-  // Helpers internos
+  // helpers internos
   function sectionTitle(doc, text) {
     doc.moveDown(0.2);
     doc.fontSize(12).text(text, { underline: true });
@@ -687,5 +777,6 @@ export async function getPdf(req, res, next) {
     doc.fontSize(10).text(text, { align: 'justify' });
   }
 }
+
 
 

@@ -3,10 +3,13 @@ import { verifyAccess } from '../utils/jwt.js';
 export function requireAuth(req, res, next) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'No autenticado' });
+  if (!token) 
+    return res.status(401).json({ error: 'No autenticado' });
+
 
   try {
     req.user = verifyAccess(token);
+    console.log('requireAuth: usuario autenticado ->', req.user);
     next();
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' });
@@ -20,4 +23,5 @@ export function requireRole(roles = []) {
     if (!roles.includes(req.user.rol)) return res.status(403).json({ error: 'Prohibido' });
     next();
   };
+
 }
