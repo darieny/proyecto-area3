@@ -17,7 +17,7 @@ const LIBRARIES = ["places"];
 export default function ClientesPage() {
   const { user } = useAuth();
 
-  // normalizamos el rol (para que 'técnico' y 'tecnico' se comporten igual)
+  // normalizamos el rol
   const rol = String(user?.rol || "")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -30,38 +30,28 @@ export default function ClientesPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // ====== filtros / paginación UI (admin usa esto real, supervisor lo ignora en backend) ======
+  // ====== filtros / paginación UI (admin usa esto; supervisor lo ignora en backend)
   const [search, setSearch] = useState("");
   const [order, setOrder] = useState("recientes");
   const [page, setPage] = useState(1);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // ====== ADMIN DATA (usa hook existente con KPIs, paginación, etc.) ======
+  // SIEMPRE llamamos el hook useClientes, aunque luego no usemos su data si es supervisor
   const {
     kpis,
     items,
     meta,
     loading,
     err,
-  } = isAdmin
-    ? useClientes({
-        search,
-        order,
-        page,
-        pageSize: PAGE_SIZE,
-        refreshTick,
-      })
-    : {
-        // si NO es admin, devolvemos placeholders,
-        // porque el supervisor va a usar su propio fetch más abajo
-        kpis: null,
-        items: [],
-        meta: { page: 1, totalPages: 1, total: 0 },
-        loading: false,
-        err: "",
-      };
+  } = useClientes({
+    search,
+    order,
+    page,
+    pageSize: PAGE_SIZE,
+    refreshTick,
+  });
 
-  // ====== SUPERVISOR DATA (fetch directo a /supervisor/clientes) ======
+  // ====== SUPERVISOR DATA (fetch directo a /supervisor/clientes)
   const [supClientes, setSupClientes] = useState([]);
   const [supLoading, setSupLoading] = useState(isSupervisor);
   const [supErr, setSupErr] = useState("");
@@ -93,7 +83,7 @@ export default function ClientesPage() {
     };
   }, [isSupervisor, refreshTick]);
 
-  // ===== refrescar cuando alguien dispare "clientes:changed" (admin crea cliente) =====
+  // ===== refrescar cuando alguien dispare "clientes:changed" (admin crea cliente)
   useEffect(() => {
     const onChanged = () => setRefreshTick((t) => t + 1);
     window.addEventListener("clientes:changed", onChanged);
@@ -125,7 +115,7 @@ export default function ClientesPage() {
   });
 
   function openModal() {
-    // esto solo se va a poder ejecutar si esAdmin === true
+    // solo tiene sentido si esAdmin === true (pero igual no se renderiza el botón para supervisor)
     setForm({
       nombre: "",
       correo: "",
@@ -220,7 +210,7 @@ export default function ClientesPage() {
     [form.latitud, form.longitud]
   );
 
-  // ======== DATA que se renderea según rol ========
+  // ======== DATA final que se renderiza según rol ========
   const finalLoading = isAdmin ? loading : supLoading;
   const finalErr = isAdmin ? err : supErr;
   const finalItems = isAdmin ? items : supClientes;
@@ -242,8 +232,9 @@ export default function ClientesPage() {
 
       <main className="main">
         <Topbar
-          onToggleCollapse={() => setCollapsed((v) => !v)}
-          onToggleMobile={() => setMobileOpen((v) => !v)}
+          title="Clientes"
+          onMenu={() => setMobileOpen((v) => !v)}
+          onCollapse={() => setCollapsed((v) => !v)}
         />
 
         <div className="clientes">
@@ -252,7 +243,7 @@ export default function ClientesPage() {
 
           {!finalLoading && !finalErr && (
             <>
-              {/* KPIs solo para admin porque el endpoint supervisor aún no los da */}
+              {/* KPIs solo admin (el endpoint supervisor aún no manda kpis) */}
               {isAdmin && <ClienteKpis kpis={kpis} />}
 
               <section className="clientes__card">
@@ -276,12 +267,11 @@ export default function ClientesPage() {
                           setPage(1);
                         }}
                         placeholder="Buscar"
-                        disabled={!isAdmin} // porque hoy la búsqueda/paginación vive en /clientes
+                        disabled={!isAdmin} // supervisor la ve gris
                       />
                     </div>
 
-                    {/* Orden también sólo tiene sentido hoy para admin,
-                        porque el supervisor obtiene lista plana */}
+                    {/* Orden sólo aplica al admin (porque supervisor recibe lista plana) */}
                     {isAdmin && (
                       <div className="dropdown">
                         <button className="btn-filter">
@@ -311,22 +301,20 @@ export default function ClientesPage() {
                   </div>
                 </header>
 
-                {/* misma tabla visual para ambos roles 💖 */}
+                {/* misma tabla visual para ambos roles */}
                 <ClientesTable items={finalItems} />
 
                 {/* paginación:
                     - admin: real
-                    - supervisor: mostramos un pager fake de 1 página */}
+                    - supervisor: pager fake de 1 página */}
                 <footer className="pager">
                   <button
-                    disabled={finalMeta.page <= 1}
+                    disabled={finalMeta.page <= 1 || !isAdmin}
                     onClick={() => isAdmin && setPage(finalMeta.page - 1)}
                   >
                     ‹
                   </button>
 
-                  {/* admin: hasta 5 páginas visibles
-                     supervisor: solo página 1 */}
                   {isAdmin ? (
                     <>
                       {[...Array(Math.min(5, finalMeta.totalPages))].map(
@@ -381,9 +369,7 @@ export default function ClientesPage() {
         </div>
       </main>
 
-      {/* ===== Modal Crear Cliente =====
-          Este modal solo tiene sentido para admin.
-          Para supervisor ni lo mostramos (open=false siempre) */}
+      {/* Modal Crear Cliente: solo admin lo ve/renderiza */}
       {isAdmin && (
         <ModalPortal open={showModal} onClose={() => setShowModal(false)}>
           <header className="m-head">
@@ -527,7 +513,7 @@ export default function ClientesPage() {
               </div>
             </label>
 
-            {/* ====== Autocomplete (Places) ====== */}
+            {/* Autocomplete */}
             <label className="field full">
               <span className="field__label">Buscar y seleccionar en el mapa</span>
               <div className="field__control">
@@ -565,7 +551,7 @@ export default function ClientesPage() {
               </div>
             </label>
 
-            {/* ====== Mapa ====== */}
+            {/* Mapa */}
             <label className="field full">
               <span className="field__label">Ubicación del cliente</span>
               <div style={{ height: 260, borderRadius: 10, overflow: "hidden" }}>
@@ -574,7 +560,10 @@ export default function ClientesPage() {
                     mapContainerStyle={{ width: "100%", height: "100%" }}
                     center={mapCenter}
                     zoom={form.latitud ? 16 : 12}
-                    options={{ streetViewControl: false, mapTypeControl: false }}
+                    options={{
+                      streetViewControl: false,
+                      mapTypeControl: false,
+                    }}
                     onClick={(e) =>
                       setForm((f) => ({
                         ...f,
@@ -671,5 +660,6 @@ export default function ClientesPage() {
     </div>
   );
 }
+
 
 
