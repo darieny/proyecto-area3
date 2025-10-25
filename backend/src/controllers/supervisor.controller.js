@@ -181,3 +181,25 @@ export async function supListTecnicos(req, res) {
 
   res.json({ items: rows });
 }
+
+// ===== Listar TODOS los clientes (solo lectura para supervisor) =====
+export async function supListClientes(req, res) {
+  try {
+    const { rows } = await query(`
+      SELECT
+        c.id,
+        c.nombre,
+        c.telefono,
+        c.correo,
+        c.ciudad,
+        c.departamento,
+        c.direccion_linea1
+      FROM clientes c
+      ORDER BY c.nombre ASC;
+    `);
+    res.json({ items: rows });
+  } catch (e) {
+    console.error('supListClientes error:', e);
+    res.status(500).json({ error: 'No se pudieron cargar los clientes' });
+  }
+}

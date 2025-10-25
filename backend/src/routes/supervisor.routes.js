@@ -5,7 +5,8 @@ import {
   supSummaryVisitas,
   supListVisitas,
   supPlanificarVisita,
-  supListTecnicos
+  supListTecnicos,
+  supListClientes
 } from '../controllers/supervisor.controller.js';
 
 const r = Router();
@@ -16,5 +17,6 @@ r.get('/dashboard/summary', supSummaryVisitas);
 r.get('/visitas', supListVisitas);
 r.post('/visitas', supPlanificarVisita);
 r.get('/tecnicos', supListTecnicos);
+r.get('/clientes', supListClientes);
 
 export default r;

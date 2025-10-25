@@ -47,6 +47,11 @@ export default function Sidebar({ collapsed, onNavigate }) {
         <span className="sb__text">Usuarios</span>
       </NavLink>
 
+      <NavLink to="/supervisor/clientes" className={linkClass} onClick={onNavigate}>
+      <span className="ico">🏪</span>
+      <span className="sb__text">Clientes</span>
+      </NavLink>
+
       <NavLink to="/supervisor/visitas" className={linkClass} onClick={onNavigate}>
         <span className="ico">📋</span>
         <span className="sb__text">Visitas / Reportes</span>
