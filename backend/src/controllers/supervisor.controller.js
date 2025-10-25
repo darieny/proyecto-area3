@@ -1,16 +1,17 @@
 import { query } from '../config/db.js';
 
-// Utilidad: obtener status por defecto VISITA_STATUS
-async function getDefaultVisitaStatusId() {
+
+// obtener el status_id para "PROGRAMADA"
+async function getProgramadaStatusId() {
   const { rows } = await query(`
     SELECT ci.id
       FROM catalogo_items ci
       JOIN catalogo_grupos cg ON cg.id = ci.grupo_id
      WHERE cg.codigo = 'VISITA_STATUS'
-       AND ci.por_defecto = TRUE
+       AND UPPER(ci.codigo) = 'PROGRAMADA'
      LIMIT 1;
   `);
-  if (!rows[0]) throw new Error('No hay estado por defecto en VISITA_STATUS');
+  if (!rows[0]) throw new Error('No existe estado PROGRAMADA en VISITA_STATUS');
   return rows[0].id;
 }
 
@@ -117,43 +118,64 @@ export async function supPlanificarVisita(req, res) {
   const { tecnicosIds } = req.supervisor;
   const {
     cliente_id,
-    ubicacion_id,      
+    ubicacion_id,
     tecnico_asignado_id,
     titulo,
     descripcion,
     programada_inicio,
-    programada_fin     
+    programada_fin
   } = req.body;
 
-  // 1) El técnico debe pertenecer a SU equipo
+  // 1) Validar técnico pertenece al equipo del supervisor
   if (!tecnicosIds.includes(Number(tecnico_asignado_id))) {
-    return res.status(403).json({ error: 'No puedes asignar visitas a técnicos fuera de tu equipo' });
+    return res
+      .status(403)
+      .json({ error: 'No puedes asignar visitas a técnicos fuera de tu equipo' });
+  }
+
+  // 2) Validar ventana de tiempo
+  if (programada_inicio && programada_fin) {
+    if (new Date(programada_fin) <= new Date(programada_inicio)) {
+      return res.status(400).json({
+        error: 'programada_fin debe ser mayor que programada_inicio'
+      });
     }
+  }
 
+  // 3) Forzar estado PROGRAMADA
+  const status_id = await getProgramadaStatusId();
 
-  // 2) Status por defecto
-  const status_id = await getDefaultVisitaStatusId();
-
-  const { rows } = await query(`
+  // 4) Insertar visita
+  const { rows } = await query(
+    `
     INSERT INTO visitas (
-      cliente_id, ubicacion_id, titulo, descripcion,
-      tecnico_asignado_id, creado_por_id, status_id,
-      programada_inicio, programada_fin
+      cliente_id,
+      ubicacion_id,
+      titulo,
+      descripcion,
+      tecnico_asignado_id,
+      creado_por_id,
+      status_id,
+      programada_inicio,
+      programada_fin
     )
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING id;
-  `, [
-    cliente_id ?? null,
-    ubicacion_id ?? null,
-    titulo,
-    descripcion ?? null,
-    tecnico_asignado_id,
-    req.user.id,
-    status_id,
-    programada_inicio ?? null,
-    programada_fin ?? null
-  ]);
+  `,
+    [
+      cliente_id ?? null,
+      ubicacion_id ?? null,
+      titulo,
+      descripcion ?? null,
+      tecnico_asignado_id,
+      req.user.id,           
+      status_id,              
+      programada_inicio ?? null,
+      programada_fin ?? null
+    ]
+  );
 
+  // 5) listo
   res.status(201).json({ id: rows[0].id });
 }
 
@@ -189,14 +211,19 @@ export async function supListClientes(req, res) {
       SELECT
         c.id,
         c.nombre,
+        c.nit,
         c.telefono,
         c.correo,
+        c.direccion_linea1,
+        c.direccion_linea2,
         c.ciudad,
         c.departamento,
-        c.direccion_linea1
+        c.estado,
+        c.notas
       FROM clientes c
       ORDER BY c.nombre ASC;
     `);
+
     res.json({ items: rows });
   } catch (e) {
     console.error('supListClientes error:', e);
