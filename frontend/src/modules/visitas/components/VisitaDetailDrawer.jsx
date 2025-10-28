@@ -162,25 +162,22 @@ export default function VisitaDetailDrawer({
 
               <div className="v-item">
                 <div className="label">Tipo</div>
-                <div className="value">{data?.tipo ?? "—"}</div>
+                <div className="value">{data?.type_etiqueta ?? "—"}</div>
               </div>
 
               <div className="v-item">
                 <div className="label">Prioridad</div>
-                <div className="value">{data?.prioridad ?? "—"}</div>
-              </div>
-
-              <div className="v-item">
-                <div className="label">Teléfono</div>
-                <div className="value">{data?.telefono ?? "—"}</div>
+                <div className="value">{data?.priority_etiqueta ?? "—"}</div>
               </div>
 
               <div className="v-item">
                 <div className="label">Ubicación</div>
                 <div className="value">
                   {data?.ubicacion_etiqueta ??
-                    data?.direccion ??
-                    data?.direccion_linea1 ??
+                    (data?.ubicacion_ciudad && data?.ubicacion_departamento
+                      ? `${data.ubicacion_ciudad}, ${data.ubicacion_departamento}`
+                      : data?.ubicacion_ciudad ||
+                        data?.ubicacion_departamento) ??
                     "—"}
                 </div>
               </div>
@@ -243,4 +240,3 @@ export default function VisitaDetailDrawer({
     document.body
   );
 }
-
