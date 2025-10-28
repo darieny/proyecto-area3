@@ -111,7 +111,24 @@
   background: #f3f4f6; border: 1px solid #e5e7eb;
   padding: 10px 16px; border-radius: 10px; cursor: pointer;
 }
-.link-cliente { color: #2563eb; text-decoration: underline; cursor: pointer; }
+/* link al detalle del cliente (columna Nombre) */
+.link-cliente {
+  text-decoration: none;
+  color: var(--text, #1f2937); 
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+  transition: color .18s ease, transform .15s ease;
+}
+
+.link-cliente:hover {
+  color: #5c6bff;          
+  transform: translateX(2px);
+}
+
+.link-cliente:active {
+  transform: scale(.98);
+}
 
 /* ===== Modal (PORTAL) ===== */
 .m-overlay{
