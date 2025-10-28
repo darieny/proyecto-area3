@@ -62,115 +62,69 @@ export default function TecnicoHome() {
         />
 
         {/* ====== FILTROS DE FECHA / RESUMEN ====== */}
-        <header
-          className="filtros-visitas-tecnico"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            alignItems: 'center',
-            marginBottom: '1rem',
-          }}
-        >
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: '#475569',
-                display: 'block',
-                marginBottom: 4,
-              }}
+        <header className="tech-filters-card">
+          <div className="tech-filters-left">
+            <div className="tech-filter-field">
+              <label className="tech-filter-label">Desde</label>
+              <div className="tech-date-wrap">
+                <input
+                  type="date"
+                  value={from || ''}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="tech-date-input"
+                />
+                <span className="tech-date-ico">📅</span>
+              </div>
+            </div>
+
+            <div className="tech-filter-field">
+              <label className="tech-filter-label">Hasta</label>
+              <div className="tech-date-wrap">
+                <input
+                  type="date"
+                  value={to || ''}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="tech-date-input"
+                />
+                <span className="tech-date-ico">📅</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={reloadToday}
+              className="tech-filter-btn tech-filter-btn--today"
             >
-              Desde
-            </label>
-            <input
-              type="date"
-              value={from || ''}
-              onChange={(e) => setFrom(e.target.value)}
-              className="input-fecha"
-              style={{
-                border: '1px solid #cbd5e1',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontSize: 14,
-                background: '#fff',
-              }}
-            />
-          </div>
+              Hoy
+            </button>
 
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: '#475569',
-                display: 'block',
-                marginBottom: 4,
-              }}
+            <button
+              type="button"
+              onClick={loadAll}
+              className="tech-filter-btn"
             >
-              Hasta
-            </label>
-            <input
-              type="date"
-              value={to || ''}
-              onChange={(e) => setTo(e.target.value)}
-              className="input-fecha"
-              style={{
-                border: '1px solid #cbd5e1',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontSize: 14,
-                background: '#fff',
-              }}
-            />
+              Ver todo
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={reloadToday}
-            style={{
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              borderRadius: 8,
-              padding: '8px 12px',
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            Hoy
-          </button>
-
-          <button
-            type="button"
-            onClick={loadAll}
-            style={{
-              background: '#fff',
-              border: '1px solid #cbd5e1',
-              borderRadius: 8,
-              padding: '8px 12px',
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            Ver todo
-          </button>
 
           {summary && (
-            <div
-              style={{
-                marginLeft: 'auto',
-                fontSize: 13,
-                color: '#475569',
-                lineHeight: 1.4,
-              }}
-            >
-              <b>Resumen:</b>{' '}
-              {summary.programadas ?? 0} prog ·{' '}
-              {summary.en_ruta ?? 0} en ruta ·{' '}
-              {summary.en_sitio ?? 0} en sitio ·{' '}
-              {summary.completadas ?? 0} completadas
+            <div className="tech-filters-summary">
+              <span className="summary-chip">
+                <b>{summary.programadas ?? 0}</b> prog
+              </span>
+              <span className="summary-chip">
+                <b>{summary.en_ruta ?? 0}</b> en ruta
+              </span>
+              <span className="summary-chip">
+                <b>{summary.en_sitio ?? 0}</b> en sitio
+              </span>
+              <span className="summary-chip">
+                <b>{summary.completadas ?? 0}</b> compl.
+              </span>
             </div>
           )}
         </header>
+
 
         {/* ====== LOADING / ERROR ====== */}
         {loading && <p className="skeleton">Cargando...</p>}
