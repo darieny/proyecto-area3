@@ -12,6 +12,7 @@ export default function SupervisorUsuarios() {
   return (
     <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
       <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
+
       <div className="main">
         <Topbar
           onMenu={() => setMobileOpen(v => !v)}
@@ -36,14 +37,11 @@ export default function SupervisorUsuarios() {
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Correo</th>
-                    <th>Código</th>
-                    <th>Especialidades</th>
-                    <th>Zona</th>
-                    <th>Disponibilidad</th>
-                    <th>Puntuación</th>
+                    <th>Código técnico</th>
                     <th>Activo</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {items.map(u => (
                     <tr key={u.id}>
@@ -51,10 +49,6 @@ export default function SupervisorUsuarios() {
                       <td>{u.nombre_completo}</td>
                       <td>{u.correo}</td>
                       <td>{u.codigo || '—'}</td>
-                      <td>{u.especialidades || '—'}</td>
-                      <td>{u.zona_cobertura || '—'}</td>
-                      <td>{u.disponibilidad || '—'}</td>
-                      <td>{u.puntuacion ?? '—'}</td>
                       <td>
                         <span className={`chip ${u.activo ? 'ok' : 'off'}`}>
                           {u.activo ? 'Sí' : 'No'}
@@ -62,8 +56,13 @@ export default function SupervisorUsuarios() {
                       </td>
                     </tr>
                   ))}
+
                   {!items.length && (
-                    <tr><td colSpan={9} className="muted tright">Sin técnicos asignados</td></tr>
+                    <tr>
+                      <td colSpan={5} className="muted tright">
+                        Sin técnicos asignados
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -74,3 +73,4 @@ export default function SupervisorUsuarios() {
     </div>
   );
 }
+
