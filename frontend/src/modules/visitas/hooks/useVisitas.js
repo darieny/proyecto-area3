@@ -3,7 +3,12 @@ import { visitasApi } from "../../../services/visitas.api.js";
 
 export function useVisitas(initial = {}) {
   const [items, setItems] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 10, totalPages: 1 });
+  const [meta, setMeta] = useState({
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    totalPages: 1,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -13,7 +18,7 @@ export function useVisitas(initial = {}) {
     pageSize: 10,
     tipo: "",
     prioridad: "",
-    estado: "",         
+    estado: "",
     from: "",
     to: "",
     ...initial,
@@ -30,32 +35,68 @@ export function useVisitas(initial = {}) {
       try {
         setLoading(true);
 
-        // convertir fechas a ISO si vienen como yyyy-mm-dd
+        // ====== construir query final q ======
         const q = { ...filters };
-        if (q.from && q.from.length <= 10) q.from = new Date(q.from + "T00:00:00").toISOString();
-        if (q.to && q.to.length <= 10)     q.to   = new Date(q.to   + "T23:59:59").toISOString();
 
+        // convertir fechas dd/mm/aaaa o yyyy-mm-dd -> rango UTC consistente con backend
+        function localDateToUTC(dateStr, endOfDay = false) {
+          const d = new Date(
+            dateStr + (endOfDay ? "T23:59:59" : "T00:00:00")
+          );
+          const utc = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+          return utc.toISOString();
+        }
+
+        if (q.from && q.from.length <= 10) {
+          q.from = localDateToUTC(q.from, false);
+        }
+        if (q.to && q.to.length <= 10) {
+          q.to = localDateToUTC(q.to, true);
+        }
+
+        // ====== llamada a la API ======
         const data = await visitasApi.list(q);
         if (!alive) return;
+
         setItems(data.items || []);
-        setMeta(data.meta || { total: 0, page: q.page, pageSize: q.pageSize, totalPages: 1 });
+        setMeta(
+          data.meta || {
+            total: 0,
+            page: q.page,
+            pageSize: q.pageSize,
+            totalPages: 1,
+          }
+        );
         setError("");
       } catch (err) {
         if (!alive) return;
-        setError(err?.response?.data?.message || "Error cargando visitas");
+        setError(
+          err?.response?.data?.message || "Error cargando visitas"
+        );
       } finally {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+
+    return () => {
+      alive = false;
+    };
   }, [filters]);
 
   const assignTecnico = useCallback(async (visitaId, tecnicoIdOrNull) => {
     await visitasApi.assignTecnico(visitaId, tecnicoIdOrNull);
-    setFilters((f) => ({ ...f })); 
+    setFilters((f) => ({ ...f }));
   }, []);
 
-  return { items, meta, loading, error, filters, setFilters: updateFilters, assignTecnico };
+  return {
+    items,
+    meta,
+    loading,
+    error,
+    filters,
+    setFilters: updateFilters,
+    assignTecnico,
+  };
 }
 
 
