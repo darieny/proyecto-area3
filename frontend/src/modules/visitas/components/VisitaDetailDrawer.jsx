@@ -58,6 +58,7 @@ export default function VisitaDetailDrawer({
       try {
         setLoading(true);
         const full = await visitasApi.getById(visita.id);
+        console.log("DETALLE VISITA FULL >>>", full);
         if (!alive) return;
         setData(full ?? null);
         if (full?.status_id != null) setEstado(Number(full.status_id));
