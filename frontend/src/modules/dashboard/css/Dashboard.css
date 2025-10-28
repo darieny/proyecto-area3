@@ -23,6 +23,20 @@
 *{ box-sizing:border-box }
 body{ color:var(--text); background:var(--bg); }
 
+/* ====== Quitar subrayado en todos los enlaces ====== */
+a,
+a:visited,
+a:active {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+
 /* =========================
    Layout general
 ========================= */
