@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../../services/http';
 
-export function useTecnicoVisitas({ from, to } = {}) {
+export function useTecnicoVisitas() {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,13 +12,12 @@ export function useTecnicoVisitas({ from, to } = {}) {
     (async () => {
       try {
         setLoading(true);
-        const q = new URLSearchParams();
-        if (from) q.set('from', from);
-        if (to) q.set('to', to);
+
         const [vis, sum] = await Promise.all([
-          api.get(`/tecnico/visitas?${q.toString()}`),
-          api.get(`/tecnico/summary?${q.toString()}`),
+          api.get(`/tecnico/visitas`),
+          api.get(`/tecnico/summary`),
         ]);
+
         if (!alive) return;
         setItems(vis.data);
         setSummary(sum.data);
@@ -30,8 +29,12 @@ export function useTecnicoVisitas({ from, to } = {}) {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
-  }, [from, to]);
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return { items, summary, loading, err };
 }
+
