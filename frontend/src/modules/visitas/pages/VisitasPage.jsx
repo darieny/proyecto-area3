@@ -99,7 +99,7 @@ function AsignarTecnicoModal({ open, visita, onClose, onSaved }) {
 /* ----------------- VISITAS (ADMIN) ----------------------------- */
 export default function VisitasPage() {
   const [collapsed, setCollapsed] = useState(false);   // desktop
-  const [mobileOpen, setMobileOpen] = useState(false); // móvil
+  const [mobileOpen, setMobileOpen] = useState(false); // telefono
 
   const [sp, setSp] = useSearchParams();
   const initialFromQS = useMemo(() => parseQS(sp), []); // solo una vez
@@ -136,7 +136,7 @@ export default function VisitasPage() {
         if (fin && fin < now) atrasadas += 1;
       }
 
-      // Completadas últimos 7 días (por fecha programada, ajústalo si prefieres real_fin)
+      // Completadas últimos 7 días
       if (v.estado_codigo === "COMPLETADA") {
         const ini = v.programada_inicio ? Date.parse(v.programada_inicio) : null;
         if (ini && now - ini <= 7 * 24 * 3600 * 1000) semanaCompletadas += 1;

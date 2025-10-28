@@ -162,3 +162,114 @@
   .drawer__footer .btn { flex: 1; }
 }
 
+/* =========================
+   Badges de estado
+========================= */
+
+.estado-badge {
+  display: inline-block;
+  min-width: 96px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  box-shadow: 0 4px 10px rgba(0,0,0,.04);
+  background: #fff;
+  color: var(--text);
+  border-color: var(--border);
+  white-space: nowrap;
+}
+
+/* Estado: PROGRAMADA */
+.estado--PROGRAMADA {
+  background: #fff7e6;      /* amarillo pastel */
+  border-color: #ffe3a3;
+  color: #8a5b00;
+}
+
+/* Estado: EN_RUTA */
+.estado--EN_RUTA {
+  background: #eaf1ff;      /* azul pastel tipo var(--blue) */
+  border-color: #c8d8ff;
+  color: #1a3d8f;
+}
+
+/* Estado: EN_SITIO */
+.estado--EN_SITIO {
+  background: #f3eafe;      /* lila pastel tipo var(--lilac) */
+  border-color: #ddc8ff;
+  color: #4a1f7a;
+}
+
+/* Estado: COMPLETADA */
+.estado--COMPLETADA {
+  background: #e8fff1;      /* verde éxito suave */
+  border-color: #bdf5d3;
+  color: #1e6b3a;
+}
+
+/* Estado: CANCELADA */
+.estado--CANCELADA {
+  background: #fff0f0;      /* rojo/rosado suave */
+  border-color: #ffcccc;
+  color: #8a1f1f;
+  text-decoration: line-through;
+}
+
+
+/* =========================
+   Botones de acción en la tabla
+========================= */
+
+.acciones-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* pill button base */
+.btn-chip {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 10px rgba(0,0,0,.04);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  min-width: 72px;
+  text-align: center;
+  transition: all .18s ease;
+}
+
+.btn-chip:hover {
+  background: #f9f9ff;
+  border-color: #d5d7ff;
+  box-shadow: 0 8px 20px rgba(92,107,255,.12);
+  transform: translateY(-1px);
+}
+
+.btn-chip:active {
+  transform: scale(.97);
+  box-shadow: 0 2px 4px rgba(0,0,0,.08);
+}
+
+/* variante azul suave para "Asignar" */
+.btn-chip.soft-blue {
+  background: #eef2ff;
+  border-color: #c7ccff;
+  color: #2f2f88;
+}
+
+.btn-chip.soft-blue:hover {
+  background: #e4e8ff;
+  border-color: #b6bcff;
+  box-shadow: 0 8px 20px rgba(92,107,255,.18);
+}

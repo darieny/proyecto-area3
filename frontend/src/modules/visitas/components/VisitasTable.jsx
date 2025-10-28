@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import '../css/visitas.css';
 
 export default function VisitasTable({
   items,
@@ -43,47 +44,60 @@ export default function VisitasTable({
           )}
 
           {!loading &&
-            rows.map((v) => (
-              <tr key={v.id}>
-                <td>{formatDate(v.programada_inicio)}</td>
-                <td>{v.cliente_nombre || `#${v.cliente_id}`}</td>
-                <td>{v.titulo || "—"}</td>
+            rows.map((v) => {
+              // Normalizamos el código del estado, ej:
+              // "Programada" -> "PROGRAMADA"
+              // "En ruta" -> "EN_RUTA"
+              const estadoCode = (
+                v.estado_codigo ||
+                v.estado_label ||
+                v.status_etiqueta ||
+                ""
+              )
+                .toString()
+                .toUpperCase()
+                .replace(/\s+/g, "_");
 
-                {/* Estado visual con color dinámico */}
-                <td>
-                  <span
-                    className="tag"
-                    style={{
-                      backgroundColor: v.status_color || "#ddd",
-                      color: "#fff",
-                      fontWeight: 500,
-                      borderRadius: "8px",
-                      padding: "3px 8px",
-                    }}
-                  >
-                    {v.estado_label || v.status_etiqueta || "—"}
-                  </span>
-                </td>
+              const estadoLabel =
+                v.estado_label || v.status_etiqueta || v.estado_codigo || "—";
 
-                <td>{v.tecnico_nombre || "Sin asignar"}</td>
-                <td className="ellipsis">{v.descripcion || "—"}</td>
+              return (
+                <tr key={v.id}>
+                  <td>{formatDate(v.programada_inicio)}</td>
 
-                <td className="tright">
-                  <button
-                    className="btn small"
-                    onClick={() => onOpenDetail(v)}
-                  >
-                    Ver
-                  </button>
-                  <button
-                    className="btn small assign"
-                    onClick={() => onAssignTecnico?.(v)}
-                  >
-                    Asignar
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td>{v.cliente_nombre || `#${v.cliente_id}`}</td>
+
+                  <td>{v.titulo || "—"}</td>
+
+                  {/* === Estado visual con badge pastel === */}
+                  <td>
+                    <span className={`estado-badge estado--${estadoCode}`}>
+                      {estadoLabel}
+                    </span>
+                  </td>
+
+                  <td>{v.tecnico_nombre || "Sin asignar"}</td>
+
+                  <td className="ellipsis">{v.descripcion || "—"}</td>
+
+                  <td className="tright acciones-cell">
+                    <button
+                      className="btn-chip"
+                      onClick={() => onOpenDetail(v)}
+                    >
+                      Ver
+                    </button>
+
+                    <button
+                      className="btn-chip soft-blue"
+                      onClick={() => onAssignTecnico?.(v)}
+                    >
+                      Asignar
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
         </tbody>
       </table>
 
@@ -104,7 +118,10 @@ export default function VisitasTable({
 
         <button
           className="btn small ghost"
-          disabled={meta.page >= (meta.totalPages || Math.ceil(meta.total / meta.pageSize) || 1)}
+          disabled={
+            meta.page >=
+            (meta.totalPages || Math.ceil(meta.total / meta.pageSize) || 1)
+          }
           onClick={() => onPageChange(meta.page + 1)}
         >
           Siguiente
@@ -119,10 +136,12 @@ function formatDate(s) {
   if (!s) return "-";
   const d = new Date(s);
   return (
-    d.toLocaleDateString("es-GT", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+    d.toLocaleDateString("es-GT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }) +
     " " +
     d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   );
 }
-
-
