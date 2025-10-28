@@ -116,18 +116,23 @@ export async function supListVisitas(req, res) {
 // ===== Crear / planificar visita para SU equipo =====
 export async function supPlanificarVisita(req, res) {
   const { tecnicosIds } = req.supervisor;
+
   const {
     cliente_id,
     ubicacion_id,
-    tecnico_asignado_id,
     titulo,
     descripcion,
     programada_inicio,
-    programada_fin
+    programada_fin,
+    creado_por_id,
   } = req.body;
 
+  const tecnicoFinal = Number(
+    req.body.tecnico_asignado_id ?? req.body.tecnicoId
+  );
+
   // 1) Validar técnico pertenece al equipo del supervisor
-  if (!tecnicosIds.includes(Number(tecnico_asignado_id))) {
+  if (!tecnicosIds.includes(tecnicoFinal)) {
     return res
       .status(403)
       .json({ error: 'No puedes asignar visitas a técnicos fuera de tu equipo' });
@@ -161,21 +166,20 @@ export async function supPlanificarVisita(req, res) {
     )
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING id;
-  `,
+    `,
     [
       cliente_id ?? null,
       ubicacion_id ?? null,
       titulo,
       descripcion ?? null,
-      tecnico_asignado_id,
-      req.user.id,           
-      status_id,              
+      tecnicoFinal,           
+      req.user.id ?? creado_por_id ?? null,
+      status_id,
       programada_inicio ?? null,
-      programada_fin ?? null
+      programada_fin ?? null,
     ]
   );
 
-  // 5) listo
   res.status(201).json({ id: rows[0].id });
 }
 

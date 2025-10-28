@@ -1,4 +1,3 @@
-// src/controllers/tecnico.controller.js
 import { query } from '../config/db.js';
 
 /* =========================
