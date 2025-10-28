@@ -219,8 +219,54 @@ body{ color:var(--text); background:var(--bg); }
 }
 .tb__menuitem:hover{ background:#f3f4f6; }
 
-/* En móviles no hay hover: se controla solo por click */
+/* Responsive */
 @media (hover: none) {
   .tb__user--menu { pointer-events:auto; }
 }
 
+/* Botón "Ver todas las visitas" */
+.panel__foot{
+  margin-top:16px;
+  display:flex;
+  justify-content:flex-start;
+}
+
+.btn-more{
+  appearance: none;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:8px 14px;
+  font-size:13px;
+  font-weight:500;
+  color:var(--text);
+  line-height:1.2;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  box-shadow:0 4px 10px rgba(0,0,0,.04);
+  cursor:pointer;
+  transition:all .18s ease;
+}
+
+.btn-more:hover{
+  background:#f9f9ff;
+  border-color:#d5d7ff;
+  box-shadow:0 8px 20px rgba(92,107,255,.12);
+  transform:translateY(-1px);
+}
+
+.btn-more:active{
+  transform:scale(.98);
+  box-shadow:0 2px 4px rgba(0,0,0,.08);
+}
+
+.btn-more__arrow{
+  font-size:14px;
+  line-height:1;
+  transition:transform .18s ease;
+}
+
+.btn-more:hover .btn-more__arrow{
+  transform:translateX(2px);
+}
