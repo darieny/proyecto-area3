@@ -44,6 +44,9 @@ export async function listMisVisitas(req, res) {
     const tecnicoUserId = req.user.id; // BIGINT
     const { from, to } = req.query;
 
+    console.log('listMisVisitas -> req.user.id (tecnicoUserId):', tecnicoUserId);
+    console.log('listMisVisitas -> query params:', req.query);
+
     const where = ['v.tecnico_asignado_id = $1'];
     const params = [tecnicoUserId];
 
@@ -75,7 +78,11 @@ export async function listMisVisitas(req, res) {
       WHERE ${where.join(' AND ')}
       ORDER BY v.programada_inicio ASC NULLS LAST, v.id DESC
     `;
+
+    console.log('listMisVisitas -> SQL params:', params);
     const { rows } = await query(sql, params);
+
+    console.log('listMisVisitas -> rows.length:', rows.length);
 
     const out = rows.map(r => ({
       id: r.id,

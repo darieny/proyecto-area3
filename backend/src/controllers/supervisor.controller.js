@@ -117,6 +117,11 @@ export async function supListVisitas(req, res) {
 export async function supPlanificarVisita(req, res) {
   const { tecnicosIds } = req.supervisor;
 
+  console.log('supPlanificarVisita -> req.user:', req.user);
+  console.log('supPlanificarVisita -> req.supervisor:', req.supervisor);
+
+  console.log('supPlanificarVisita -> req.body:', req.body);
+
   const {
     cliente_id,
     ubicacion_id,
@@ -130,6 +135,9 @@ export async function supPlanificarVisita(req, res) {
   const tecnicoFinal = Number(
     req.body.tecnico_asignado_id ?? req.body.tecnicoId
   );
+
+   console.log('supPlanificarVisita -> tecnicoFinal:', tecnicoFinal);
+  console.log('supPlanificarVisita -> tecnicosIds permitidos:', tecnicosIds);
 
   // 1) Validar técnico pertenece al equipo del supervisor
   if (!tecnicosIds.includes(tecnicoFinal)) {
@@ -179,6 +187,8 @@ export async function supPlanificarVisita(req, res) {
       programada_fin ?? null,
     ]
   );
+
+  console.log('supPlanificarVisita -> INSERT RESULT:', rows[0]);
 
   res.status(201).json({ id: rows[0].id });
 }
