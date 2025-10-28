@@ -284,3 +284,32 @@ a:hover {
 .btn-more:hover .btn-more__arrow{
   transform:translateX(2px);
 }
+
+/* ===============================
+   ESTILOS PARA DASHBOARD SUPERVISOR
+=============================== */
+.shell .dash__title {
+  color: #0f172a;
+  margin-bottom: 18px;
+}
+
+/* Colores pastel diferentes a los del admin */
+.shell .dash__kpis .kpi:nth-child(1) {
+  background: #e8f9fd;      
+  border-color: #bae6fd;
+}
+
+.shell .dash__kpis .kpi:nth-child(2) {
+  background: #fff7e6;      
+  border-color: #ffe3a3;
+}
+
+.shell .dash__kpis .kpi:nth-child(3) {
+  background: #f3e8ff;      
+  border-color: #e9d5ff;
+}
+
+.shell .dash__kpis .kpi:nth-child(4) {
+  background: #e8fff1;      
+  border-color: #bdf5d3;
+}
