@@ -361,4 +361,47 @@
 /* footer buttons consistentes */
 .mfoot .btn{ min-width:110px; }
 
+/* ===== FIX 1: overlay correcto para este modal ===== */
+.modal__backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+/* Evita scroll del body cuando el modal está abierto */
+body:has(.modal__backdrop){ overflow: hidden; }
+
+/* ===== FIX 2: base del modal (usado junto a .modal--sheet) ===== */
+.modal{
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15,23,42,.18);
+  width: min(820px, 96vw);
+  overflow: hidden;
+}
+
+/* Uniformar las tarjetas internas del modal */
+.modal--sheet .card.soft{
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* Alinear el badge del estado en el header del modal */
+.mhead .estado-badge{
+  padding: 6px 10px;
+  font-size: 12px;
+  transform: translateY(-1px);
+}
+
+/* ===== FIX 3: alias para la tabla (.tbl en JSX) ===== */
+.tbl{ width:100%; border-collapse: collapse; }
+.tbl th, .tbl td{ padding:10px 12px; border-bottom:1px solid #f1f1f1; vertical-align: top; }
+.tbl th{ text-align:left; font-weight:600; font-size:13px; color:#555; }
+
 
