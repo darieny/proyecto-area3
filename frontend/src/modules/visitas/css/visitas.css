@@ -287,3 +287,70 @@
   min-width: 60px; 
 }
 
+
+/* ===== Modal sheet refinado ===== */
+.modal--sheet{
+  width:min(820px, 96vw);
+  padding:0;
+  border-radius:16px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+.mhead, .mfoot{
+  background: var(--card);
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.mfoot{
+  border-top:1px solid var(--border);
+  border-bottom:none;
+  gap:8px;
+}
+
+/* título + badge de estado */
+.mhead__title{
+  display:flex; align-items:center; gap:10px;
+}
+.mhead h3{ margin:0; }
+
+/* cuerpo con respiración */
+.mbody{ padding:16px; }
+
+/* grid utilitaria */
+.grid2{ display:grid; grid-template-columns:1fr 1fr; }
+.grid2.gap16{ gap:16px; }
+@media (max-width: 720px){
+  .grid2{ grid-template-columns:1fr; }
+}
+
+/* key-value table */
+.kv{ margin:0; }
+.kv__row{
+  display:grid;
+  grid-template-columns: 160px 1fr;
+  gap:10px;
+  padding:6px 0;
+  border-bottom:1px dashed var(--border);
+}
+.kv__row:last-child{ border-bottom:none; }
+.kv dt{ font-weight:600; color:var(--muted, #666); }
+.kv dd{ margin:0; }
+
+/* chips ligeros */
+.chip{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:var(--bg);
+  font-size:12px;
+}
+
+/* texto pequeño gris */
+.sm{ font-size:12px; }
+

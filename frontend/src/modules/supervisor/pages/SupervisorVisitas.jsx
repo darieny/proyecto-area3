@@ -175,45 +175,144 @@ export default function SupervisorVisitas() {
       {/* ===== Modal Detalle de Visita (solo lectura + PDF) ===== */}
       {selected && (
         <div className="modal__backdrop" onClick={() => setSelected(null)}>
-          <div className="modal large" onClick={(e) => e.stopPropagation()}>
-            <h3>Detalle de visita</h3>
-
-            <div className="grid2" style={{ gap: 12 }}>
-              <div className="card soft">
-                <p>
-                  <b>ID:</b> {selected.id}
-                </p>
-                <p>
-                  <b>Título:</b> {selected.titulo}
-                </p>
-                <p>
-                  <b>Cliente:</b> {selected.cliente}
-                </p>
-                <p>
-                  <b>Técnico asignado:</b> {selected.tecnico}
-                </p>
+          <div
+            className="modal modal--sheet"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header */}
+            <div className="mhead">
+              <div className="mhead__title">
+                <h3>Detalle de visita</h3>
+                <span
+                  className={`estado-badge estado--${String(
+                    selected.status || ""
+                  )
+                    .toUpperCase()
+                    .replace(/\s+/g, "_")}`}
+                  title="Estado actual"
+                >
+                  {selected.status || "—"}
+                </span>
               </div>
+              <button
+                className="btn-icon"
+                onClick={() => setSelected(null)}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="card soft">
-                <p>
-                  <b>Estado:</b> {selected.status}
-                </p>
-                <p>
-                  <b>Inicio programado:</b>{" "}
-                  {selected.programada_inicio
-                    ? new Date(selected.programada_inicio).toLocaleString()
-                    : "—"}
-                </p>
-                <p>
-                  <b>Fin programado:</b>{" "}
-                  {selected.programada_fin
-                    ? new Date(selected.programada_fin).toLocaleString()
-                    : "—"}
-                </p>
+            {/* Body */}
+            <div className="mbody">
+              <div className="grid2 gap16">
+                <div className="card soft">
+                  <dl className="kv">
+                    <div className="kv__row">
+                      <dt>ID</dt>
+                      <dd>#{selected.id}</dd>
+                    </div>
+                    <div className="kv__row">
+                      <dt>Título</dt>
+                      <dd>{selected.titulo}</dd>
+                    </div>
+                    <div className="kv__row">
+                      <dt>Cliente</dt>
+                      <dd>{selected.cliente}</dd>
+                    </div>
+                    <div className="kv__row">
+                      <dt>Técnico</dt>
+                      <dd>{selected.tecnico || "—"}</dd>
+                    </div>
+                    {/* Estos tres solo se muestran si vienen del API */}
+                    {selected.type_etiqueta && (
+                      <div className="kv__row">
+                        <dt>Tipo</dt>
+                        <dd>
+                          <span className="chip">{selected.type_etiqueta}</span>
+                        </dd>
+                      </div>
+                    )}
+                    {selected.priority_etiqueta && (
+                      <div className="kv__row">
+                        <dt>Prioridad</dt>
+                        <dd>
+                          <span className="chip">
+                            {selected.priority_etiqueta}
+                          </span>
+                        </dd>
+                      </div>
+                    )}
+                    {(selected.ubicacion_etiqueta ||
+                      selected.ubicacion_ciudad ||
+                      selected.ubicacion_departamento) && (
+                      <div className="kv__row">
+                        <dt>Ubicación</dt>
+                        <dd>
+                          {selected.ubicacion_etiqueta
+                            ? `${selected.ubicacion_etiqueta} • `
+                            : ""}
+                          {[
+                            selected.ubicacion_ciudad,
+                            selected.ubicacion_departamento,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "—"}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+
+                <div className="card soft">
+                  <dl className="kv">
+                    <div className="kv__row">
+                      <dt>Inicio programado</dt>
+                      <dd>
+                        {selected.programada_inicio
+                          ? new Date(
+                              selected.programada_inicio
+                            ).toLocaleString()
+                          : "—"}
+                      </dd>
+                    </div>
+                    <div className="kv__row">
+                      <dt>Fin programado</dt>
+                      <dd>
+                        {selected.programada_fin
+                          ? new Date(selected.programada_fin).toLocaleString()
+                          : "—"}
+                      </dd>
+                    </div>
+                    {/* tiempos reales si existen */}
+                    {selected.real_inicio && (
+                      <div className="kv__row">
+                        <dt>Inicio real</dt>
+                        <dd>
+                          {new Date(selected.real_inicio).toLocaleString()}
+                        </dd>
+                      </div>
+                    )}
+                    {selected.real_fin && (
+                      <div className="kv__row">
+                        <dt>Fin real</dt>
+                        <dd>{new Date(selected.real_fin).toLocaleString()}</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  {/* Nota “estado actual” en texto discreto */}
+                  <div className="muted sm" style={{ marginTop: 8 }}>
+                    Actual: {selected.status || "—"}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="row end gap" style={{ marginTop: 16 }}>
+            {/* Footer */}
+            <div className="mfoot">
               <button className="btn" onClick={() => setSelected(null)}>
                 Cerrar
               </button>
