@@ -32,6 +32,21 @@ async function ensureUbicacionPerteneceACliente(ubicacion_id, cliente_id) {
   if (!rows[0]) throw new Error('ubicacion_id no pertenece al cliente');
 }
 
+/** Resolver id de catálogo desde id o código */
+async function resolveCatalogId({ id, codigo, grupo }) {
+  if (id != null && id !== '') return Number(id);
+  if (!codigo) return null;
+  const { rows } = await query(`
+    SELECT ci.id
+      FROM catalogo_items ci
+      JOIN catalogo_grupos cg ON cg.id = ci.grupo_id
+     WHERE cg.codigo = $1
+       AND UPPER(ci.codigo) = UPPER($2)
+     LIMIT 1
+  `, [grupo, String(codigo)]);
+  return rows[0]?.id ?? null;
+}
+
 /** Selección “normalizada” para lista/detalle (ADMIN) */
 function buildSelectNormalizado() {
   return `
@@ -41,12 +56,12 @@ function buildSelectNormalizado() {
     v.tecnico_asignado_id, tu.nombre_completo AS tecnico_nombre,
     v.creado_por_id, cu.nombre_completo AS creado_por_nombre,
     v.status_id,
-    s.codigo   AS estado_codigo,      -- NUEVO: código textual (PROGRAMADA, EN_RUTA…)
-    s.etiqueta AS estado_label,       -- NUEVO: etiqueta legible
-    s.etiqueta AS status_etiqueta,    -- (compatibilidad)
-    s.color    AS status_color,       -- (compatibilidad)
-    v.priority_id, pr.etiqueta AS priority_etiqueta, pr.color AS priority_color,
-    v.type_id, ty.etiqueta AS type_etiqueta,
+    s.codigo   AS estado_codigo,
+    s.etiqueta AS estado_label,
+    s.etiqueta AS status_etiqueta,
+    s.color    AS status_color,
+    v.priority_id, pr.codigo AS priority_codigo, pr.etiqueta AS priority_etiqueta, pr.color AS priority_color,
+    v.type_id,     ty.codigo AS type_codigo,     ty.etiqueta AS type_etiqueta,
     v.programada_inicio, v.programada_fin, v.real_inicio, v.real_fin
   `;
 }
@@ -89,7 +104,7 @@ export async function list(req, res, next) {
       where.push(`(v.titulo ILIKE $${params.length} OR v.descripcion ILIKE $${params.length})`);
     }
     if (filters.status_id) { params.push(filters.status_id); where.push(`v.status_id = $${params.length}`); }
-    if (filters.estado) { params.push(filters.estado); where.push(`s.codigo = $${params.length}`); } // NUEVO
+    if (filters.estado) { params.push(filters.estado); where.push(`UPPER(s.codigo) = UPPER($${params.length})`); } // NUEVO
     if (filters.priority_id) { params.push(filters.priority_id); where.push(`v.priority_id = $${params.length}`); }
     if (filters.type_id) { params.push(filters.type_id); where.push(`v.type_id = $${params.length}`); }
     if (filters.cliente_id) { params.push(filters.cliente_id); where.push(`v.cliente_id = $${params.length}`); }
@@ -198,6 +213,19 @@ export async function createForCliente(req, res, next) {
     }
 
     await ensureUbicacionPerteneceACliente(b.ubicacion_id, clienteId);
+
+    // Normalizar tipo/prioridad (acepta id o código)
+    const priorityId = await resolveCatalogId({
+      id: b.priority_id,
+      codigo: b.prioridad || b.priority_codigo,
+      grupo: 'VISITA_PRIORIDAD',
+    });
+    const typeId = await resolveCatalogId({
+      id: b.type_id,
+      codigo: b.tipo || b.type_codigo,
+      grupo: 'VISITA_TIPO',
+    });
+
     const statusId = b.status_id || await getDefaultStatusId();
 
     const { rows } = await query(
@@ -214,8 +242,8 @@ export async function createForCliente(req, res, next) {
         b.tecnico_asignado_id || null,
         b.creado_por_id,
         statusId,
-        b.priority_id || null,
-        b.type_id || null,
+        priorityId || null,   
+        typeId || null,       
         b.programada_inicio || null,
         b.programada_fin || null
       ]
@@ -242,6 +270,22 @@ export async function updateOne(req, res, next) {
     // Si envían cliente_id y ubicacion_id juntos, validar relación
     if (b.cliente_id && b.ubicacion_id) {
       await ensureUbicacionPerteneceACliente(b.ubicacion_id, b.cliente_id);
+    }
+
+    // Permitir actualizar por código también
+    if (b.prioridad || b.priority_codigo) {
+      b.priority_id = await resolveCatalogId({
+        id: b.priority_id,
+        codigo: b.prioridad || b.priority_codigo,
+        grupo: 'VISITA_PRIORIDAD'
+      });
+    }
+    if (b.tipo || b.type_codigo) {
+      b.type_id = await resolveCatalogId({
+        id: b.type_id,
+        codigo: b.tipo || b.type_codigo,
+        grupo: 'VISITA_TIPO'
+      });
     }
 
     const fields = [];
