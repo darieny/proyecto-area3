@@ -12,6 +12,7 @@ import SupervisorHome from './modules/supervisor/pages/SupervisorHome';
 import SupervisorUsuarios from './modules/supervisor/pages/SupervisorUsuarios';
 import SupervisorVisitas from './modules/supervisor/pages/SupervisorVisitas';
 import SupervisorClientes from './modules/supervisor/pages/SupervisorClientes';
+import SupervisorClienteDetail from "../pages/SupervisorClienteDetail";
 
 // Páginas base
 import Login from './pages/Login';
@@ -121,6 +122,15 @@ export default function App() {
                   <SupervisorClientes />
                 </RequireRole>
               }
+            />
+
+            <Route 
+              path="supervisor/clientes/:id" 
+              element={
+                <RequireRole role="supervisor">
+                  <SupervisorClienteDetail />
+                </RequireRole>
+              } 
             />
 
             {/* Tecnico */}
