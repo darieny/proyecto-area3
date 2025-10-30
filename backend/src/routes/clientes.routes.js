@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
-  listClientes, getCliente, createCliente, updateCliente, patchEstado, adminClientesSummary
+  listClientes, getCliente, createCliente, updateCliente, patchEstado, adminClientesSummary, deleteOne
 } from '../controllers/clientes.controller.js';
 import { createForCliente } from '../controllers/visitas.controller.js';
 
@@ -18,6 +18,7 @@ r.post('/', createCliente);
 r.put('/:id', updateCliente);
 r.patch('/:id/estado', patchEstado);
 r.post('/:clienteId/visitas', createForCliente);
+r.delete('/:id', deleteOne);
 
 export default r;
 

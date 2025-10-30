@@ -256,6 +256,14 @@
 .d-form .col-span{ grid-column:1 / -1; }
 .d-actions{ grid-column:1 / -1; display:flex; justify-content:flex-end; gap:10px; }
 
+.btn.danger{
+  background:#ef4444;
+  border:1px solid #dc2626;
+  color:#fff;
+}
+.btn.danger:hover{ background:#dc2626; }
+
+
 /* ===== Responsive ===== */
 @media (max-width: 900px){
   .cliente__grid{ grid-template-columns:1fr; }

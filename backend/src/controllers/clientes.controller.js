@@ -219,3 +219,60 @@ export async function adminClientesSummary(_req, res) {
 
   res.json({ total: totalR[0]?.total ?? 0, nuevos_mes, sin_visitas });
 }
+
+
+
+/** DELETE CLIENTE */
+export async function deleteOne(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+
+    // Verifica que exista
+    const { rows: exists } = await query(`SELECT id FROM clientes WHERE id=$1`, [id]);
+    if (!exists[0]) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    await query('BEGIN');
+    try {
+      // ON DELETE CASCADE
+      await query(`DELETE FROM clientes WHERE id=$1`, [id]);
+      await query('COMMIT');
+      return res.json({ ok: true, deleted: id, cascade: true });
+    } catch (e) {
+      // Fallback (violación de FK)
+      await query('ROLLBACK');
+      if (e.code !== '23503') throw e; // error no es FK
+
+      // Fallback manual
+      await query('BEGIN');
+
+      // 1) Borra hijos de visitas del cliente
+      await query(`
+        DELETE FROM visit_logs
+         WHERE visita_id IN (SELECT id FROM visitas WHERE cliente_id=$1)
+      `, [id]);
+      await query(`
+        DELETE FROM evidencias
+         WHERE visita_id IN (SELECT id FROM visitas WHERE cliente_id=$1)
+      `, [id]);
+      await query(`
+        DELETE FROM visita_observaciones
+         WHERE visita_id IN (SELECT id FROM visitas WHERE cliente_id=$1)
+      `, [id]);
+
+      // 2) Borra visitas del cliente
+      await query(`DELETE FROM visitas WHERE cliente_id=$1`, [id]);
+
+      // 3) Borra ubicaciones del cliente
+      await query(`DELETE FROM ubicaciones WHERE cliente_id=$1`, [id]);
+
+      // 4) borra el cliente
+      await query(`DELETE FROM clientes WHERE id=$1`, [id]);
+
+      await query('COMMIT');
+      return res.json({ ok: true, deleted: id, cascade: false });
+    }
+  } catch (e) {
+    try { await query('ROLLBACK'); } catch {}
+    next(e);
+  }
+}

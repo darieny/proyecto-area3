@@ -8,6 +8,7 @@ import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import VisitaFormModal from "../../visitas/components/VisitaFormModal";
 import { useVisitas } from "../../visitas/hooks/useVisitas.js";
 import ClienteVisitasWidget from "../../visitas/components/ClienteVisitasWidget.jsx";
+import { api } from "../../../services/http.js";              
 
 const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; //Guatemala
 const LIBRARIES = ["places"];
@@ -33,7 +34,7 @@ export default function ClienteDetail() {
     direccion_linea1: "", direccion_linea2: "", estado: "activo",
   });
 
-  // Últimas visitas del cliente (5)
+  // últimas visitas (5)
   const {
     items: visitasCliente,
     loading: loadingVisitas,
@@ -114,6 +115,23 @@ export default function ClienteDetail() {
     }
   };
 
+  // Eliminar cliente en BD y navegar a /clientes
+  async function onDelete() {
+    const ok = window.confirm(
+      "¿Eliminar este cliente y todos sus datos asociados? Esta acción no se puede deshacer."
+    );
+    if (!ok) return;
+    try {
+      await api.delete(`/clientes/${id}`);
+      alert("Cliente eliminado correctamente.");
+      navigate("/clientes");
+    } catch (e) {
+      const msg = e?.response?.data?.error || "No se pudo eliminar el cliente.";
+      alert(msg);
+      console.error(e);
+    }
+  }
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
     libraries: LIBRARIES,
@@ -152,6 +170,7 @@ export default function ClienteDetail() {
                   <Link to="/clientes" className="btn-light">← Volver</Link>
                   <button className="btn-primary" onClick={() => setOpenVisita(true)}>Nueva visita</button>
                   <button className="btn-primary" onClick={() => setEdit(true)}>Editar</button>
+                  <button className="btn danger" onClick={onDelete}>Eliminar cliente</button> {/* 👈 NUEVO */}
                 </div>
               </header>
 
@@ -206,7 +225,6 @@ export default function ClienteDetail() {
               </div>
             </section>
           )}
-
         </div>
 
         {/* Modal para crear visita */}
@@ -219,14 +237,13 @@ export default function ClienteDetail() {
             telefono: cliente.telefono,
             ubicacionId: ubicacionId,
           }}
-          onSaved={() => {
-            setVisitasFilters({ ...visitasFilters });
-          }}
+          onSaved={() => setVisitasFilters({ ...visitasFilters })}
         />
       </main>
     </div>
   );
 }
+
 
 
 
