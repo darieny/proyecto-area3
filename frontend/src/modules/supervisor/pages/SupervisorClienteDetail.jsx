@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
-import { api } from "../../../services/http";                 
+import { api } from "../../../services/http";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import "../../clientes/css/Clientes.css";
-import VisitaFormModal from "../../visitas/components/VisitaFormModal";
 
-const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 };
+const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Guatemala
 const LIBRARIES = ["places"];
 
 export default function SupervisorClienteDetail() {
@@ -19,13 +18,11 @@ export default function SupervisorClienteDetail() {
   const [cliente, setCliente] = useState(null);
   const [coords, setCoords] = useState(null);
   const [placeLabel, setPlaceLabel] = useState("");
-  const [ubicacionId, setUbicacionId] = useState(null);
-  const [openVisita, setOpenVisita] = useState(false);
-
 
   const GOOGLE_KEY =
     (typeof import.meta !== "undefined" && import.meta?.env?.VITE_GOOGLE_MAPS_KEY) ||
-    process.env.REACT_APP_GOOGLE_MAPS_KEY || "";
+    process.env.REACT_APP_GOOGLE_MAPS_KEY ||
+    "";
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_KEY,
@@ -36,7 +33,7 @@ export default function SupervisorClienteDetail() {
     let alive = true;
     (async () => {
       try {
-        // Detalle
+        // Detalle del cliente (solo lectura)
         const { data: c } = await api.get(`/supervisor/clientes/${id}`);
         if (!alive) return;
         setCliente(c);
@@ -50,7 +47,6 @@ export default function SupervisorClienteDetail() {
           if (u?.latitud != null && u?.longitud != null) {
             setCoords({ lat: Number(u.latitud), lng: Number(u.longitud) });
             setPlaceLabel(u.direccion_linea1 || u.etiqueta || "Ubicación principal");
-            setUbicacionId(u.id);
           } else {
             setCoords(null);
           }
@@ -98,9 +94,6 @@ export default function SupervisorClienteDetail() {
               </div>
               <div className="cliente__actions">
                 <Link to="/supervisor/clientes" className="btn-light">← Volver</Link>
-                <button className="btn-primary" onClick={() => setOpenVisita(true)}>
-                  Planificar visita
-                </button>
               </div>
             </header>
 
@@ -147,18 +140,8 @@ export default function SupervisorClienteDetail() {
             </div>
           </section>
         </div>
-
-        <VisitaFormModal
-          open={openVisita}
-          onClose={() => setOpenVisita(false)}
-          clienteId={cliente.id}
-          prefill={{
-            direccion: cliente.direccion_linea1,
-            telefono: cliente.telefono,
-            ubicacionId: ubicacionId,
-          }}
-        />
       </main>
     </div>
   );
 }
+
