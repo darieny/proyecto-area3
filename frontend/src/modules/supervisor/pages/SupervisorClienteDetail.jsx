@@ -2,17 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
-import { useClientes } from "../../clientes/hooks/useClientes";
+import { api } from "../../../services/http";                 
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import "../../clientes/css/Clientes.css";
 import VisitaFormModal from "../../visitas/components/VisitaFormModal";
 
-const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 }; // Guatemala
+const DEFAULT_CENTER = { lat: 14.6349, lng: -90.5069 };
 const LIBRARIES = ["places"];
 
 export default function SupervisorClienteDetail() {
   const { id } = useParams();
-  const { getCliente, getUbicacionPrincipal } = useClientes();
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -21,36 +20,47 @@ export default function SupervisorClienteDetail() {
   const [coords, setCoords] = useState(null);
   const [placeLabel, setPlaceLabel] = useState("");
   const [ubicacionId, setUbicacionId] = useState(null);
-
   const [openVisita, setOpenVisita] = useState(false);
 
+
+  const GOOGLE_KEY =
+    (typeof import.meta !== "undefined" && import.meta?.env?.VITE_GOOGLE_MAPS_KEY) ||
+    process.env.REACT_APP_GOOGLE_MAPS_KEY || "";
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_KEY,
+    libraries: LIBRARIES,
+  });
+
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
-        const c = await getCliente(id);
+        // Detalle
+        const { data: c } = await api.get(`/supervisor/clientes/${id}`);
+        if (!alive) return;
         setCliente(c);
 
+        // Coordenadas: del cliente o de su ubicación principal
         if (c?.latitud != null && c?.longitud != null) {
           setCoords({ lat: Number(c.latitud), lng: Number(c.longitud) });
           setPlaceLabel(c.direccion_linea1 || c.nombre || "Ubicación");
         } else {
-          const u = await getUbicacionPrincipal(id);
+          const { data: u } = await api.get(`/supervisor/clientes/${id}/ubicacion-principal`);
           if (u?.latitud != null && u?.longitud != null) {
             setCoords({ lat: Number(u.latitud), lng: Number(u.longitud) });
             setPlaceLabel(u.direccion_linea1 || u.etiqueta || "Ubicación principal");
             setUbicacionId(u.id);
+          } else {
+            setCoords(null);
           }
         }
       } catch (e) {
         console.error("No se pudo cargar cliente (supervisor)", e);
       }
     })();
-  }, [id, getCliente, getUbicacionPrincipal]);
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
-    libraries: LIBRARIES,
-  });
+    return () => { alive = false; };
+  }, [id]);
 
   const center = useMemo(() => (coords ? coords : DEFAULT_CENTER), [coords]);
 
@@ -138,7 +148,6 @@ export default function SupervisorClienteDetail() {
           </section>
         </div>
 
-        {/* Planificar visita desde detalle */}
         <VisitaFormModal
           open={openVisita}
           onClose={() => setOpenVisita(false)}
