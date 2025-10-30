@@ -244,3 +244,36 @@ export async function supListClientes(req, res) {
     res.status(500).json({ error: 'No se pudieron cargar los clientes' });
   }
 }
+
+/** GET /supervisor/clientes/:id */
+export async function supGetCliente(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await query(`
+      SELECT id, nombre, nit, telefono, correo,
+             direccion_linea1, direccion_linea2,
+             ciudad, departamento, notas, estado,
+             latitud, longitud
+      FROM clientes
+      WHERE id = $1
+    `, [id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Cliente no encontrado' });
+    res.json(rows[0]);
+  } catch (e) { next(e); }
+}
+
+/** GET /supervisor/clientes/:id/ubicacion-principal */
+export async function supGetUbicacionPrincipal(req, res, next) {
+  try {
+    const clienteId = Number(req.params.id);
+    const { rows } = await query(`
+      SELECT id, etiqueta, direccion_linea1, direccion_linea2,
+             ciudad, departamento, latitud, longitud
+      FROM ubicaciones
+      WHERE cliente_id = $1
+      ORDER BY por_defecto DESC, id ASC
+      LIMIT 1
+    `, [clienteId]);
+    res.json(rows[0] || null);
+  } catch (e) { next(e); }
+}

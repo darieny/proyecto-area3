@@ -6,7 +6,7 @@ import {
   supListVisitas,
   supPlanificarVisita,
   supListTecnicos,
-  supListClientes
+  supListClientes, supGetCliente, supGetUbicacionPrincipal
 } from '../controllers/supervisor.controller.js';
 
 const r = Router();
@@ -18,5 +18,7 @@ r.get('/visitas', supListVisitas);
 r.post('/visitas', supPlanificarVisita);
 r.get('/tecnicos', supListTecnicos);
 r.get('/clientes', supListClientes);
+r.get('/clientes/:id', supGetCliente);
+r.get('/clientes/:id/ubicacion-principal', supGetUbicacionPrincipal);
 
 export default r;
