@@ -252,8 +252,7 @@ export async function supGetCliente(req, res, next) {
     const { rows } = await query(`
       SELECT id, nombre, nit, telefono, correo,
              direccion_linea1, direccion_linea2,
-             ciudad, departamento, notas, estado,
-             latitud, longitud
+             ciudad, departamento, notas, estado
       FROM clientes
       WHERE id = $1
     `, [id]);
