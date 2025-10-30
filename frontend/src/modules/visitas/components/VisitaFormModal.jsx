@@ -7,7 +7,7 @@ import { useTecnicos } from "../../visitas/hooks/useTecnicos.js";
 export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}, onSaved }) {
   const { user } = useAuth();
   const { createVisita, saving, error } = useVisitaForm();
-  const tecnicos = useTecnicos();
+  const { items: tecnicos, loading: loadingTec, err: errTec } = useTecnicos();
 
   const [form, setForm] = useState({
     clienteId: clienteId || "",
@@ -19,9 +19,10 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
     observaciones: "",
     files: [],
     creadoPorId: user?.id ?? null,
-    tecnicoId: "",                
+    tecnicoId: "", 
   });
 
+  // Prefills y tracking de usuario
   useEffect(() => {
     setForm((f) => ({
       ...f,
@@ -31,6 +32,13 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
       creadoPorId: user?.id ?? f.creadoPorId,
     }));
   }, [clienteId, prefill.telefono, prefill.ubicacionId, user?.id]);
+
+  // Si no hay técnico seleccionado y ya cargó la lista, preselecciona el primero
+  useEffect(() => {
+    if (!loadingTec && tecnicos.length && !form.tecnicoId) {
+      setForm((f) => ({ ...f, tecnicoId: String(tecnicos[0].id) }));
+    }
+  }, [loadingTec, tecnicos, form.tecnicoId]);
 
   const fileInputRef = useRef(null);
 
@@ -63,8 +71,8 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
       });
       onSaved?.(visita);
       onClose?.();
-    } catch (e) {
-      console.error("Error creando visita:", e?.response?.data || e.message);
+    } catch (e2) {
+      console.error("Error creando visita:", e2?.response?.data || e2.message);
     }
   }
 
@@ -138,15 +146,23 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
               name="tecnicoId"
               value={form.tecnicoId}
               onChange={handleChange}
+              disabled={loadingTec}
             >
               <option value="">— Sin asignar —</option>
               {tecnicos.map((t) => (
-                <option key={t.id} value={t.id}>{t.nombre_completo}</option>
+                <option key={t.id} value={t.id}>
+                  {t.nombre_completo}
+                </option>
               ))}
             </select>
+            {!loadingTec && errTec && (
+              <small className="form-error" style={{ display: "block", marginTop: 6 }}>
+                {errTec}
+              </small>
+            )}
           </div>
 
-          {/* Evidencias (futuro) */}
+          {/* Evidencias */}
           <div>
             <label className="form-label">Adjuntar foto/evidencia</label>
             <input
@@ -186,5 +202,6 @@ export default function VisitaFormModal({ open, onClose, clienteId, prefill = {}
     document.body
   );
 }
+
 
 
