@@ -48,7 +48,7 @@ export default function SupervisorClienteDetail() {
   }, [id, getCliente, getUbicacionPrincipal]);
 
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY || process.env.REACT_APP_GOOGLE_MAPS_KEY,
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
     libraries: LIBRARIES,
   });
 
