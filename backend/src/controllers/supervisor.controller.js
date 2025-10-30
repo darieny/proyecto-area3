@@ -265,14 +265,33 @@ export async function supGetCliente(req, res, next) {
 export async function supGetUbicacionPrincipal(req, res, next) {
   try {
     const clienteId = Number(req.params.id);
+
+    // 1) Preferir la que tenga coordenadas
+    const { rows: withCoords } = await query(`
+      SELECT id, etiqueta, direccion_linea1, direccion_linea2,
+             ciudad, departamento, latitud, longitud
+        FROM ubicaciones
+       WHERE cliente_id = $1
+         AND latitud  IS NOT NULL
+         AND longitud IS NOT NULL
+       ORDER BY id ASC
+       LIMIT 1
+    `, [clienteId]);
+
+    if (withCoords[0]) return res.json(withCoords[0]);
+
+    // 2) Fallback: la primera que exista
     const { rows } = await query(`
       SELECT id, etiqueta, direccion_linea1, direccion_linea2,
              ciudad, departamento, latitud, longitud
-      FROM ubicaciones
-      WHERE cliente_id = $1
-      ORDER BY por_defecto DESC, id ASC
-      LIMIT 1
+        FROM ubicaciones
+       WHERE cliente_id = $1
+       ORDER BY id ASC
+       LIMIT 1
     `, [clienteId]);
-    res.json(rows[0] || null);
-  } catch (e) { next(e); }
+
+    return res.json(rows[0] || null);
+  } catch (e) {
+    next(e);
+  }
 }
