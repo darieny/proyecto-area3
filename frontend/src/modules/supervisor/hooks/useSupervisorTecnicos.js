@@ -9,10 +9,13 @@ export function useSupervisorTecnicos() {
   async function load() {
     try {
       setLoading(true);
-      const r = await api.get('/supervisor/tecnicos');
-      setItems(r.data.items || []);
+      setErr('');
+      const { data } = await api.get('/supervisor/tecnicos');
+      setItems(data.items || []);
     } catch (e) {
-      setErr(e?.response?.data?.error || 'No se pudo cargar el equipo');
+      console.warn('Error cargando técnicos del supervisor:', e?.response?.data || e.message);
+      setErr(e?.response?.data?.error || 'No se pudo cargar el equipo de técnicos');
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -22,3 +25,4 @@ export function useSupervisorTecnicos() {
 
   return { items, loading, err, reload: load };
 }
+

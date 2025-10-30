@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { api } from "../../../services/http";
+import { useSupervisorTecnicos } from "../hooks/useSupervisorTecnicos"; 
 import "../../clientes/css/Clientes.css";
-import { Link } from "react-router-dom";
 
 export default function SupervisorClientes() {
   const [collapsed, setCollapsed] = useState(false);
@@ -13,7 +14,9 @@ export default function SupervisorClientes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [tecnicos, setTecnicos] = useState([]);
+  // Técnicos del supervisor
+  const { items: tecnicos, loading: loadingTec, err: errTec } = useSupervisorTecnicos();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [clienteSel, setClienteSel] = useState(null);
 
@@ -27,13 +30,14 @@ export default function SupervisorClientes() {
   const [saving, setSaving] = useState(false);
   const [msgError, setMsgError] = useState("");
 
-  // cargar clientes
+  // Cargar clientes
   useEffect(() => {
     (async () => {
       try {
+        setLoading(true);
         const res = await api.get("/supervisor/clientes");
         setClientes(res.data.items || []);
-      } catch (e) {
+      } catch {
         setError("No se pudieron cargar los clientes");
       } finally {
         setLoading(false);
@@ -41,33 +45,30 @@ export default function SupervisorClientes() {
     })();
   }, []);
 
-  // cargar técnicos del supervisor
+  // Si no hay técnico seleccionado pero ya cargaron los técnicos, preselecciona el primero
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get("/supervisor/tecnicos");
-        setTecnicos(res.data.items || []);
-      } catch (e) {
-        console.error("Error al cargar técnicos", e);
-      }
-    })();
-  }, []);
+    if (!loadingTec && tecnicos.length && !form.tecnico_asignado_id) {
+      setForm((f) => ({ ...f, tecnico_asignado_id: tecnicos[0].id }));
+    }
+  }, [loadingTec, tecnicos]);
 
   const abrirModal = (cliente) => {
     setClienteSel(cliente);
-    setForm({
+    setForm((f) => ({
+      ...f,
       titulo: "",
       descripcion: "",
       tecnico_asignado_id: tecnicos[0]?.id || "",
       programada_inicio: "",
       programada_fin: "",
-    });
+    }));
     setModalOpen(true);
   };
 
   const cerrarModal = () => {
     setModalOpen(false);
     setClienteSel(null);
+    setMsgError("");
   };
 
   const handleChange = (e) => {
@@ -92,7 +93,6 @@ export default function SupervisorClientes() {
         programada_inicio: form.programada_inicio || null,
         programada_fin: form.programada_fin || null,
       });
-
       cerrarModal();
     } catch (e) {
       const msg = e?.response?.data?.error || "Error al crear la visita";
@@ -103,11 +103,7 @@ export default function SupervisorClientes() {
   };
 
   return (
-    <div
-      className={`shell ${collapsed ? "is-collapsed" : ""} ${
-        mobileOpen ? "menu-open" : ""
-      }`}
-    >
+    <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
       <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
       <div className="main">
         <Topbar
@@ -135,30 +131,33 @@ export default function SupervisorClientes() {
                 {clientes.map((c) => (
                   <tr key={c.id}>
                     <td>
-                      <Link
-                        to={`/supervisor/clientes/${c.id}`}
-                        className="link-cliente"
-                      >
+                      <Link to={`/supervisor/clientes/${c.id}`} className="link-cliente">
                         {c.nombre}
                       </Link>
                     </td>
-                    <td>
-                      {c.ciudad || "-"} / {c.departamento || "-"}
-                    </td>
+                    <td>{c.ciudad || "-"} / {c.departamento || "-"}</td>
                     <td>{c.telefono || "—"}</td>
                     <td className="tright">
                       <button
                         className="btn small"
                         onClick={() => abrirModal(c)}
+                        disabled={loadingTec || !tecnicos.length}
+                        title={loadingTec ? "Cargando técnicos…" : (!tecnicos.length ? "No hay técnicos asignados" : "")}
                       >
                         Planificar visita
                       </button>
                     </td>
                   </tr>
                 ))}
+                {!clientes.length && (
+                  <tr><td colSpan="4" className="muted tright">Sin clientes</td></tr>
+                )}
               </tbody>
             </table>
           )}
+
+          {/* error de técnicos */}
+          {!loadingTec && errTec && <div className="error" style={{ marginTop: 10 }}>{errTec}</div>}
         </div>
 
         {/* Modal planificar */}
@@ -173,21 +172,12 @@ export default function SupervisorClientes() {
               <form onSubmit={guardarVisita} className="form">
                 <label>
                   Título
-                  <input
-                    name="titulo"
-                    value={form.titulo}
-                    onChange={handleChange}
-                    required
-                  />
+                  <input name="titulo" value={form.titulo} onChange={handleChange} required />
                 </label>
 
                 <label>
                   Descripción
-                  <textarea
-                    name="descripcion"
-                    value={form.descripcion}
-                    onChange={handleChange}
-                  />
+                  <textarea name="descripcion" value={form.descripcion} onChange={handleChange} />
                 </label>
 
                 <label>
@@ -196,6 +186,7 @@ export default function SupervisorClientes() {
                     name="tecnico_asignado_id"
                     value={form.tecnico_asignado_id}
                     onChange={handleChange}
+                    disabled={loadingTec || !tecnicos.length}
                   >
                     {tecnicos.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -231,11 +222,7 @@ export default function SupervisorClientes() {
                   <button type="button" className="btn" onClick={cerrarModal}>
                     Cancelar
                   </button>
-                  <button
-                    type="submit"
-                    className="btn primary"
-                    disabled={saving}
-                  >
+                  <button type="submit" className="btn primary" disabled={saving || loadingTec || !tecnicos.length}>
                     {saving ? "Guardando..." : "Guardar visita"}
                   </button>
                 </div>
@@ -247,3 +234,4 @@ export default function SupervisorClientes() {
     </div>
   );
 }
+
