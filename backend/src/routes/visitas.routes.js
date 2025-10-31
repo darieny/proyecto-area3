@@ -10,6 +10,9 @@ r.get('/ping', (_req, res) => res.json({ ok: true, route: '/visitas/ping' }));
 // Solo requiere estar autenticado (admin, supervisor o técnico)
 r.get('/:id/pdf', ctrl.getPdf);
 
+// === Marcar como completada + enviar correo ===
+r.post('/:id/completar', requireAuth, requireRole(['admin', 'supervisor', 'tecnico']), ctrl.completarYEnviar);
+
 // Por ahora, todo sólo admin
 r.use(requireAuth, requireRole(['admin']));
 
