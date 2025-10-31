@@ -835,7 +835,7 @@ async function getCatalogIdByCode(grupoCodigo, itemCodigo) {
     FROM catalogo_items ci
     JOIN catalogo_grupos cg ON cg.id = ci.grupo_id
    WHERE cg.codigo = $1
-     AND UPPER(ci.codigo) = UPPER($2)
+     AND UPPER(ci.codigo) = UPPER($2)s
    LIMIT 1;
   `, [grupoCodigo, itemCodigo]);
   return rows[0]?.id ?? null;
@@ -853,48 +853,58 @@ async function getStatusCompletadaId() {
  *  Ruta: POST /api/visitas/:id/completar
  *  Body esperado:
  *  {
- *    resumen: string,
- *    trabajo_realizado: string,
- *    hora_inicio?: ISOString,
- *    hora_fin?: ISOString,
- *    materiales?: [{ descripcion, cantidad?, unidad?, costo? }]
+ *    resumen?: string,
+ *    trabajo_realizado?: string
  *  }
+ *  - Horas reales se toman del sistema:
+ *    real_inicio = COALESCE(real_inicio, NOW())
+ *    real_fin    = NOW()
  * ========================= */
 export async function completarYEnviar(req, res, next) {
   const visitaId = Number(req.params.id);
-  const {
-    resumen = '',
-    trabajo_realizado = '',
-    hora_inicio = null,
-    hora_fin = null,
-    materiales = []
-  } = req.body || {};
+  const { resumen = '', trabajo_realizado = '' } = req.body || {};
 
   try {
-    // 1) Traer visita + cliente + ubicación (mínimo necesario para el correo)
+    // 1) Traer visita + cliente + ubicación + técnico (para el correo)
     const { rows: vRows } = await query(`
-      SELECT v.id, v.titulo, v.real_inicio, v.real_fin, v.cliente_id, v.ubicacion_id,
+      SELECT v.id, v.titulo, v.real_inicio, v.real_fin,
+             v.cliente_id, v.ubicacion_id, v.tecnico_asignado_id,
              c.nombre AS cliente_nombre, c.correo AS cliente_correo,
-             u.etiqueta AS ubicacion_etiqueta, u.direccion_linea1
+             u.etiqueta AS ubicacion_etiqueta, u.direccion_linea1,
+             tu.nombre_completo AS tecnico_nombre
         FROM visitas v
-        JOIN clientes c         ON c.id = v.cliente_id
-        LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+        JOIN clientes c          ON c.id = v.cliente_id
+        LEFT JOIN ubicaciones u  ON u.id = v.ubicacion_id
+        LEFT JOIN usuarios tu    ON tu.id = v.tecnico_asignado_id
        WHERE v.id = $1
        LIMIT 1;
     `, [visitaId]);
 
     if (!vRows[0]) return res.status(404).json({ ok:false, error:'Visita no encontrada' });
 
-    const visita    = vRows[0];
-    const cliente   = { id: visita.cliente_id, nombre: visita.cliente_nombre, correo: visita.cliente_correo };
-    const ubicacion = visita.ubicacion_id ? { etiqueta: visita.ubicacion_etiqueta, direccion_linea1: visita.direccion_linea1 } : null;
+    const visita     = vRows[0];
+    const cliente    = { id: visita.cliente_id, nombre: visita.cliente_nombre, correo: visita.cliente_correo };
+    const ubicacion  = visita.ubicacion_id ? { etiqueta: visita.ubicacion_etiqueta, direccion_linea1: visita.direccion_linea1 } : null;
+    const tecnico    = { id: visita.tecnico_asignado_id, nombre: visita.tecnico_nombre || '-' };
 
-    // 2) Guardar cierre + materiales + cambiar estado a COMPLETADA (transacción)
+    // 2) Transacción: marcar horas del sistema + estado COMPLETADA + upsert de cierre
     const completadaId = await getStatusCompletadaId();
 
     await query('BEGIN');
 
-    // 2.1 upsert del cierre
+    // Horas reales desde el sistema
+    const { rows: tRows } = await query(`
+      UPDATE visitas
+         SET real_inicio = COALESCE(real_inicio, NOW()),
+             real_fin    = NOW(),
+             status_id   = $1
+       WHERE id = $2
+       RETURNING real_inicio, real_fin;
+    `, [completadaId, visitaId]);
+    const real_inicio = tRows[0].real_inicio;
+    const real_fin    = tRows[0].real_fin;
+
+    // Upsert de cierre
     const { rows: cierreRows } = await query(`
       INSERT INTO visita_cierre (visita_id, resumen, trabajo_realizado, hora_inicio, hora_fin, creado_por)
       VALUES ($1,$2,$3,$4,$5,$6)
@@ -902,55 +912,33 @@ export async function completarYEnviar(req, res, next) {
       DO UPDATE SET resumen = EXCLUDED.resumen,
                     trabajo_realizado = EXCLUDED.trabajo_realizado,
                     hora_inicio = EXCLUDED.hora_inicio,
-                    hora_fin = EXCLUDED.hora_fin
+                    hora_fin    = EXCLUDED.hora_fin
       RETURNING *;
-    `, [visitaId, resumen, trabajo_realizado, hora_inicio, hora_fin, req.user?.id ?? null]);
+    `, [visitaId, resumen, trabajo_realizado, real_inicio, real_fin, req.user?.id ?? null]);
     const cierre = cierreRows[0];
-
-    // 2.2 materiales: reemplazo simple
-    await query(`DELETE FROM visita_materiales WHERE visita_id = $1`, [visitaId]);
-    if (Array.isArray(materiales)) {
-      for (const m of materiales) {
-        if (!m?.descripcion) continue;
-        await query(`
-          INSERT INTO visita_materiales (visita_id, descripcion, cantidad, unidad, costo)
-          VALUES ($1,$2,$3,$4,$5);
-        `, [visitaId, m.descripcion, m.cantidad ?? 1, m.unidad ?? 'pz', m.costo ?? null]);
-      }
-    }
-
-    // 2.3 estado = COMPLETADA y real_fin si viene
-    await query(`
-      UPDATE visitas
-         SET status_id = $1,
-             real_fin  = COALESCE($2, real_fin)
-       WHERE id = $3;
-    `, [completadaId, hora_fin, visitaId]);
 
     await query('COMMIT');
 
-    // 3) Datos para el correo: materiales & evidencias
-    const { rows: mats }  = await query(
-      `SELECT descripcion, cantidad, unidad FROM visita_materiales WHERE visita_id=$1 ORDER BY id`,
-      [visitaId]
-    );
+    // 3) Evidencias (si existen)
     const { rows: evids } = await query(
       `SELECT archivo_url, descripcion FROM evidencias WHERE visita_id=$1 ORDER BY id`,
       [visitaId]
     );
 
-    // 4) HTML del reporte y envío
+    // 4) Email HTML + técnico
     const html = buildVisitaEmail({
-      visita:   { id: visita.id, titulo: visita.titulo, real_inicio: visita.real_inicio, real_fin: visita.real_fin },
-      cliente, ubicacion, cierre, materiales: mats, evidencias: evids
+      visita:   { id: visita.id, titulo: visita.titulo, real_inicio, real_fin },
+      cliente, ubicacion,
+      cierre:   { ...cierre, tecnico_nombre: tecnico.nombre },
+      materiales: [], // explícitamente vacío
+      evidencias: evids
     });
 
-    const to = cliente.correo || process.env.SENDGRID_FROM_EMAIL; // fallback si el cliente no tiene correo
+    const to = cliente.correo || process.env.SENDGRID_FROM_EMAIL; // fallback
     const subject = `Reporte de visita #${visita.id} — ${cliente.nombre}`;
 
     const sent = await enviarCorreoVisita(to, subject, html);
 
-    // 5) Marcar enviado_email_at / guardar correo_destino si fue OK
     if (sent.ok) {
       await query(
         `UPDATE visita_cierre SET correo_destino=$1, enviado_email_at=NOW() WHERE visita_id=$2`,
@@ -964,6 +952,7 @@ export async function completarYEnviar(req, res, next) {
     next(err);
   }
 }
+
 
 
 

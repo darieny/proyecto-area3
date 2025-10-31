@@ -1,3 +1,4 @@
+// frontend/src/services/visitas.api.js
 import { api } from "./http.js";
 
 /* =======================
@@ -19,22 +20,8 @@ function toISODateOrEmpty(v, endOfDay = false) {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
-// Mapeo flexible para estado (acepta id o texto)
-const STATUS_MAP = {
-  "1": 1,
-  "2": 2,
-  "3": 3,
-  "4": 4,
-  "5": 5,
-  programada: 1,
-  "en_progreso": 2,
-  "en-progreso": 2,
-  "en progreso": 2,
-  completada: 3,
-  cancelada: 4,
-  pendiente: 5,
-};
-
+// (Opcional) mapeos legacy — si te llega texto, mandamos 'estado' textual;
+// si te llega número, mandamos 'status_id'. Evitamos suponer IDs fijos.
 const PRIORITY_MAP = {
   baja: 4,
   media: 5,
@@ -58,7 +45,7 @@ const mapCreate = (data) => {
     creado_por_id: data.creadoPorId,
     ubicacion_id: data.ubicacionId ?? null,
     tecnico_asignado_id: data.tecnicoId ?? null,
-    status_id: 1,
+    status_id: 1, // si tu catálogo tiene otro ID por defecto, el backend también acepta por_defecto
     programada_inicio: data.programadaInicio ?? start,
     programada_fin: data.programadaFin ?? end,
   };
@@ -78,14 +65,17 @@ export const visitasApi = {
     // cliente
     if (raw.cliente_id) params.cliente_id = raw.cliente_id;
 
-    // estado (acepta id o nombre)
+    // estado: si es número -> status_id; si es texto -> estado (backend filtra por codigo)
     if (raw.estado !== undefined && raw.estado !== "") {
-      const key = String(raw.estado).toLowerCase();
-      const sid = STATUS_MAP[key];
-      if (sid) params.status_id = sid;
+      const val = String(raw.estado).trim();
+      if (/^\d+$/.test(val)) {
+        params.status_id = Number(val);
+      } else {
+        params.estado = val; // ej. "COMPLETADA", "EN_RUTA", "EN_SITIO"
+      }
     }
 
-    // prioridad / tipo
+    // prioridad / tipo (si te llegan como texto)
     if (raw.prioridad) {
       const pid = PRIORITY_MAP[String(raw.prioridad).toLowerCase()];
       if (pid) params.priority_id = pid;
@@ -125,13 +115,13 @@ export const visitasApi = {
     return data;
   },
 
-  // Actualizar campos genéricos
+  // Actualizar campos genéricos (BACKEND: PUT /visitas/:id)
   async patch(id, changes) {
-    const { data } = await api.patch(`/visitas/${id}`, changes);
+    const { data } = await api.put(`/visitas/${id}`, changes);
     return data;
   },
 
-  // Cambiar estado de la visita
+  // Cambiar estado de la visita (usa el endpoint admin /visitas/:id/estado)
   async patchEstado(id, estadoId, opts = {}) {
     const { autorId, nota } = opts || {};
     let body;
@@ -153,7 +143,7 @@ export const visitasApi = {
     return data;
   },
 
-  // Subir evidencia (foto o archivo)
+  // Subir archivo (si lo usas)
   async uploadFile(file) {
     const form = new FormData();
     form.append("file", file);
@@ -170,5 +160,17 @@ export const visitasApi = {
     });
     return data;
   },
+
+  // ==== Completar visita + enviar correo ====
+  async completar(id, { resumen = '', trabajo_realizado = '' } = {}) {
+    const { data } = await api.post(`/visitas/${id}/completar`, {
+      resumen,
+      trabajo_realizado,
+      // hora_inicio/hora_fin las determina el backend (real_inicio/real_fin)
+    });
+    return data; // { ok, visitaId, email: { ok: true } }
+  },
+
 };
+
 

@@ -9,11 +9,15 @@ import '../css/Tecnico.css';
 export default function TecnicoDetalle() {
   const { id } = useParams();
   const [sp] = useSearchParams();
-  const { data, loading, err, cambiarEstado, subirEvidencia } = useTecnicoDetalle(id);
+  const { data, loading, err, cambiarEstado, subirEvidencia, completar } = useTecnicoDetalle(id);
 
-  // === estados UI para menú 
-  const [collapsed, setCollapsed] = useState(false);   // colapsado desktop
-  const [mobileOpen, setMobileOpen] = useState(false); // off-canvas móvil
+  // UI layout
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // campos de cierre
+  const [resumen, setResumen] = useState('');
+  const [trabajo, setTrabajo] = useState('');
 
   useEffect(() => {
     const accion = sp.get('accion');
@@ -30,17 +34,7 @@ export default function TecnicoDetalle() {
             geo: (lat && lng) ? { lat: Number(lat), lng: Number(lng) } : undefined
           });
         }
-        if (accion === 'finalizar' && data.estado === 'EN_SITIO') {
-          const nota = (sp.get('nota') || '').trim();
-          if (!nota) {
-            alert('La nota de cierre es obligatoria para finalizar.');
-            return;
-          }
-          await cambiarEstado('COMPLETADA', { nota });
-        }
-      } catch {
-        // silencioso para no romper vista
-      }
+      } catch {}
     })();
   }, [sp, data, cambiarEstado]);
 
@@ -60,13 +54,21 @@ export default function TecnicoDetalle() {
     await subirEvidencia({ url: String(url).trim(), nota: String(nota).trim() });
   };
 
+  const handleCompletar = async () => {
+    const r = resumen.trim();
+    if (!r) {
+      alert('El resumen es obligatorio para finalizar.');
+      return;
+    }
+    await completar({ resumen: r, trabajo_realizado: String(trabajo || '').trim() });
+    setResumen('');
+    setTrabajo('');
+    alert('Visita completada y correo enviado (si el cliente tiene correo).');
+  };
+
   return (
     <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
-      <Sidebar
-        collapsed={collapsed}
-        onNavigate={() => setMobileOpen(false)}
-      />
-
+      <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
       <main className="main">
         <Topbar
           onToggleCollapse={() => setCollapsed(v => !v)}
@@ -118,20 +120,41 @@ export default function TecnicoDetalle() {
                 </button>
               )}
 
-              {data.estado === 'EN_SITIO' && (
-                <button
-                  className="btn btn--done"
-                  onClick={async () => {
-                    const nota = (prompt('Nota de cierre (obligatoria):') || '').trim();
-                    if (!nota) {
-                      alert('Debes escribir la nota para finalizar la visita.');
-                      return;
-                    }
-                    await cambiarEstado('COMPLETADA', { nota });
-                  }}
-                >
-                  Finalizar (COMPLETADA)
-                </button>
+              {/* completar + correo */}
+              {(data.estado === 'EN_SITIO' || data.estado === 'COMPLETADA') && (
+                <div className="card" style={{ marginTop: 12, maxWidth: 640 }}>
+                  <h4 style={{ marginTop: 0 }}>Finalizar visita y enviar reporte</h4>
+                  <label style={{ display: 'block', margin: '8px 0 4px' }}>
+                    Resumen (obligatorio)
+                  </label>
+                  <textarea
+                    value={resumen}
+                    onChange={(e) => setResumen(e.target.value)}
+                    rows={3}
+                    placeholder="Ej.: Se revisó el equipo y se normalizó el servicio."
+                    style={{ width: '100%' }}
+                  />
+
+                  <label style={{ display: 'block', margin: '12px 0 4px' }}>
+                    Trabajo realizado (opcional)
+                  </label>
+                  <textarea
+                    value={trabajo}
+                    onChange={(e) => setTrabajo(e.target.value)}
+                    rows={3}
+                    placeholder="Ej.: Ajuste de conectores, cambio de cable."
+                    style={{ width: '100%' }}
+                  />
+
+                  <div style={{ marginTop: 12 }}>
+                    <button className="btn btn--done" onClick={handleCompletar}>
+                      Finalizar (COMPLETADA + correo)
+                    </button>
+                  </div>
+                  <p className="muted" style={{ marginTop: 8 }}>
+                    * El horario real se toma del sistema (inicio si no existía, y fin al completar).
+                  </p>
+                </div>
               )}
 
               <button className="btn btn--ghost" onClick={handleSubirEvidencia}>
@@ -166,6 +189,7 @@ export default function TecnicoDetalle() {
     </div>
   );
 }
+
 
 
 
