@@ -58,7 +58,7 @@ app.use('/api/visitas', visitasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/tecnico', tecnicoRoutes);
 app.use('/api/supervisor', supervisorRoutes);
-app.use('/api/test', testRoute);
+app.use('/api/test', testRoute); //solo para prueba
 
 
 export default app;
