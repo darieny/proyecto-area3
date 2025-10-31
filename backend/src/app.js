@@ -12,6 +12,7 @@ import visitasRoutes from './routes/visitas.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
 import tecnicoRoutes from './routes/tecnico.routes.js';
 import supervisorRoutes from './routes/supervisor.routes.js';
+import testRoute from './routes/test.route.js';
 
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/visitas', visitasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/tecnico', tecnicoRoutes);
 app.use('/api/supervisor', supervisorRoutes);
+app.use('/api/test', testRoute);
 
 
 export default app;
