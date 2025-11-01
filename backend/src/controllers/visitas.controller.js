@@ -860,17 +860,20 @@ async function getStatusCompletadaId() {
  *    real_inicio = COALESCE(real_inicio, NOW())
  *    real_fin    = NOW()
  * ========================= */
+
 export async function completarYEnviar(req, res, next) {
   const visitaId = Number(req.params.id);
   const { resumen = '', trabajo_realizado = '' } = req.body || {};
 
   try {
-    // 1) Traer visita + cliente + ubicación + técnico (para el correo)
+    // 0) Traer info base para correo (sin bloquear)
     const { rows: vRows } = await query(`
       SELECT v.id, v.titulo, v.real_inicio, v.real_fin,
              v.cliente_id, v.ubicacion_id, v.tecnico_asignado_id,
-             c.nombre AS cliente_nombre, c.correo AS cliente_correo,
-             u.etiqueta AS ubicacion_etiqueta, u.direccion_linea1,
+             c.nombre  AS cliente_nombre,
+             c.correo  AS cliente_correo,
+             u.etiqueta AS ubicacion_etiqueta,
+             u.direccion_linea1,
              tu.nombre_completo AS tecnico_nombre
         FROM visitas v
         JOIN clientes c          ON c.id = v.cliente_id
@@ -880,19 +883,34 @@ export async function completarYEnviar(req, res, next) {
        LIMIT 1;
     `, [visitaId]);
 
-    if (!vRows[0]) return res.status(404).json({ ok: false, error: 'Visita no encontrada' });
+    if (!vRows[0]) {
+      return res.status(404).json({ ok: false, error: 'Visita no encontrada' });
+    }
 
-    const visita = vRows[0];
-    const cliente = { id: visita.cliente_id, nombre: visita.cliente_nombre, correo: visita.cliente_correo };
-    const ubicacion = visita.ubicacion_id ? { etiqueta: visita.ubicacion_etiqueta, direccion_linea1: visita.direccion_linea1 } : null;
-    const tecnico = { id: visita.tecnico_asignado_id, nombre: visita.tecnico_nombre || '-' };
+    const visitaBase = vRows[0];
+    const cliente   = { id: visitaBase.cliente_id, nombre: visitaBase.cliente_nombre, correo: visitaBase.cliente_correo };
+    const ubicacion = visitaBase.ubicacion_id
+      ? { etiqueta: visitaBase.ubicacion_etiqueta, direccion_linea1: visitaBase.direccion_linea1 }
+      : null;
+    const tecnico   = { id: visitaBase.tecnico_asignado_id, nombre: visitaBase.tecnico_nombre || '-' };
 
-    // 2) Transacción: marcar horas del sistema + estado COMPLETADA + upsert de cierre
     const completadaId = await getStatusCompletadaId();
 
+    // 1) Transacción: lock + update + upsert + log
     await query('BEGIN');
 
-    // Horas reales desde el sistema
+    // 1.1) Lock para leer estado anterior
+    const { rows: lockRows } = await query(
+      `SELECT status_id FROM visitas WHERE id = $1 FOR UPDATE`,
+      [visitaId]
+    );
+    if (!lockRows[0]) {
+      await query('ROLLBACK');
+      return res.status(404).json({ ok: false, error: 'Visita no encontrada' });
+    }
+    const estadoAnteriorId = lockRows[0].status_id;
+
+    // 1.2) Marcar horas reales (si falta inicio, lo pone ahora) y estado COMPLETADA
     const { rows: tRows } = await query(`
       UPDATE visitas
          SET real_inicio = COALESCE(real_inicio, NOW()),
@@ -901,10 +919,11 @@ export async function completarYEnviar(req, res, next) {
        WHERE id = $2
        RETURNING real_inicio, real_fin;
     `, [completadaId, visitaId]);
-    const real_inicio = tRows[0].real_inicio;
-    const real_fin = tRows[0].real_fin;
 
-    // Upsert de cierre
+    const real_inicio = tRows[0].real_inicio;
+    const real_fin    = tRows[0].real_fin;
+
+    // 1.3) Upsert de cierre
     const { rows: cierreRows } = await query(`
       INSERT INTO visita_cierre (visita_id, resumen, trabajo_realizado, hora_inicio, hora_fin, creado_por)
       VALUES ($1,$2,$3,$4,$5,$6)
@@ -917,56 +936,96 @@ export async function completarYEnviar(req, res, next) {
     `, [visitaId, resumen, trabajo_realizado, real_inicio, real_fin, req.user?.id ?? null]);
     const cierre = cierreRows[0];
 
+    // 1.4) Log al timeline
+    await query(`
+      INSERT INTO visita_eventos (visita_id, estado_anterior_id, estado_nuevo_id, nota, autor_id)
+      VALUES ($1, $2, $3, $4, $5);
+    `, [visitaId, estadoAnteriorId, completadaId, (resumen || 'COMPLETADA'), req.user?.id ?? null]);
+
     await query('COMMIT');
 
-    // 3) Evidencias (si existen)
+    // 2) Evidencias (para correo y/o respuesta)
     const { rows: evids } = await query(
-      `SELECT archivo_url, descripcion FROM evidencias WHERE visita_id=$1 ORDER BY id`,
+      `SELECT id, archivo_url, descripcion FROM evidencias WHERE visita_id=$1 ORDER BY id`,
       [visitaId]
     );
 
-    // 4) Email HTML + técnico
-    const html = buildVisitaEmail({
-      visita: { id: visita.id, titulo: visita.titulo, real_inicio, real_fin },
-      cliente, ubicacion,
-      cierre: { ...cierre, tecnico_nombre: tecnico.nombre },
-      materiales: [], // explícitamente vacío
-      evidencias: evids
-    });
+    // 3) Envío de correo
+    let sent = { ok: false };
+    try {
+      const html = buildVisitaEmail({
+        visita:     { id: visitaBase.id, titulo: visitaBase.titulo, real_inicio, real_fin },
+        cliente, ubicacion,
+        cierre:     { ...cierre, tecnico_nombre: tecnico.nombre },
+        materiales: [],
+        evidencias: evids,
+      });
 
-    const to = cliente.correo || process.env.SENDGRID_FROM_EMAIL; // fallback
-    const subject = `Reporte de visita #${visita.id} — ${cliente.nombre}`;
+      const to = cliente.correo || process.env.SENDGRID_FROM_EMAIL;
+      const subject = `Reporte de visita #${visitaBase.id} — ${cliente.nombre}`;
+      sent = await enviarCorreoVisita(to, subject, html);
 
-    const sent = await enviarCorreoVisita(to, subject, html);
-
-    if (sent.ok) {
-      await query(
-        `UPDATE visita_cierre SET correo_destino=$1, enviado_email_at=NOW() WHERE visita_id=$2`,
-        [to, visitaId]
-      );
+      if (sent.ok) {
+        await query(
+          `UPDATE visita_cierre SET correo_destino=$1, enviado_email_at=NOW() WHERE visita_id=$2`,
+          [to, visitaId]
+        );
+      }
+    } catch (mailErr) {
+      console.error('Error enviando correo de visita:', mailErr);
     }
 
-    // === devolver la visita completa y actualizada ===
+    // 4) Devolver visita normalizada + timeline + evidencias (útil si decides usarla)
     const selectNorm = buildSelectNormalizado();
     const { rows: full } = await query(`
-  SELECT ${selectNorm}
-  FROM visitas v
-  JOIN clientes c         ON c.id = v.cliente_id
-  LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
-  LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
-  JOIN usuarios cu        ON cu.id = v.creado_por_id
-  LEFT JOIN catalogo_items s  ON s.id  = v.status_id
-  LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
-  LEFT JOIN catalogo_items ty ON ty.id = v.type_id
-  WHERE v.id = $1
-`, [visitaId]);
+      SELECT ${selectNorm}
+      FROM visitas v
+      JOIN clientes c         ON c.id = v.cliente_id
+      LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+      LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+      JOIN usuarios cu        ON cu.id = v.creado_por_id
+      LEFT JOIN catalogo_items s  ON s.id  = v.status_id
+      LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+      LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+      WHERE v.id = $1
+      LIMIT 1;
+    `, [visitaId]);
 
-    return res.json({ ok: true, visitaId, email: sent });
+    // Eventos para el timeline
+    const { rows: eventos } = await query(`
+      SELECT ve.id,
+             ve.created_at,
+             ve.nota,
+             s.codigo  AS estado_nuevo,
+             s.etiqueta AS estado_nuevo_etiqueta
+        FROM visita_eventos ve
+        LEFT JOIN catalogo_items s ON s.id = ve.estado_nuevo_id
+       WHERE ve.visita_id = $1
+       ORDER BY ve.created_at ASC;
+    `, [visitaId]);
+
+    // Mapea evidencias simple
+    const evidencias = evids.map(e => ({
+      id: e.id,
+      url: e.archivo_url,
+      nota: e.descripcion || null,
+    }));
+
+
+    return res.json({
+      ok: true,
+      visitaId,
+      email: sent,
+      visita: full[0] || null,
+      eventos,
+      evidencias,
+    });
   } catch (err) {
-    try { await query('ROLLBACK'); } catch (_) { }
+    try { await query('ROLLBACK'); } catch (_) {}
     next(err);
   }
 }
+
 
 
 

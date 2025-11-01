@@ -9,7 +9,16 @@ import '../css/Tecnico.css';
 export default function TecnicoDetalle() {
   const { id } = useParams();
   const [sp] = useSearchParams();
-  const { data, loading, err, cambiarEstado, subirEvidencia, completar, reload  } = useTecnicoDetalle(id);
+
+  const {
+    data,
+    loading,
+    err,
+    cambiarEstado,
+    subirEvidencia,
+    completar,
+    reload,
+  } = useTecnicoDetalle(id);
 
   // UI layout
   const [collapsed, setCollapsed] = useState(false);
@@ -19,6 +28,7 @@ export default function TecnicoDetalle() {
   const [resumen, setResumen] = useState('');
   const [trabajo, setTrabajo] = useState('');
 
+  // Atajos por querystring: ?accion=iniciar | ?accion=checkin&lat=&lng=
   useEffect(() => {
     const accion = sp.get('accion');
     if (!accion || !data) return;
@@ -29,20 +39,23 @@ export default function TecnicoDetalle() {
           await cambiarEstado('EN_RUTA');
         }
         if (accion === 'checkin' && data.estado === 'EN_RUTA') {
-          const lat = sp.get('lat'), lng = sp.get('lng');
+          const lat = sp.get('lat');
+          const lng = sp.get('lng');
           await cambiarEstado('EN_SITIO', {
-            geo: (lat && lng) ? { lat: Number(lat), lng: Number(lng) } : undefined
+            geo: lat && lng ? { lat: Number(lat), lng: Number(lng) } : undefined,
           });
         }
-      } catch {}
+      } catch {
+      }
     })();
   }, [sp, data, cambiarEstado]);
 
   const abrirComoLlegar = () => {
     if (!data) return;
-    const dest = (data.lat && data.lng)
-      ? `${data.lat},${data.lng}`
-      : encodeURIComponent(data.direccion || data.cliente);
+    const dest =
+      (data.lat && data.lng)
+        ? `${data.lat},${data.lng}`
+        : encodeURIComponent(data.direccion || data.cliente);
     const url = `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -60,24 +73,23 @@ export default function TecnicoDetalle() {
       alert('El resumen es obligatorio para finalizar.');
       return;
     }
-    
     try {
-    const resp = await completar({
-      resumen: r,
-      trabajo_realizado: String(trabajo || '').trim(),
-    });
+      await completar({
+        resumen: r,
+        trabajo_realizado: String(trabajo || '').trim(),
+      });
 
-    // refrescar desde el backend
-    await reload();
+      // refrescar desde el backend (trae estado COMPLETADA y timeline con el log)
+      await reload();
 
-    setResumen('');
-    setTrabajo('');
-    alert('Visita completada y correo enviado (si el cliente tiene correo).');
-  } catch (err) {
-    console.error(err);
-    alert('Ocurrió un error al completar la visita.');
-  }
-};
+      setResumen('');
+      setTrabajo('');
+      alert('Visita completada y correo enviado (si el cliente tiene correo).');
+    } catch (e) {
+      console.error(e);
+      alert('Ocurrió un error al completar la visita.');
+    }
+  };
 
   return (
     <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
@@ -94,11 +106,12 @@ export default function TecnicoDetalle() {
         {data && (
           <>
             <h2>{data.cliente}</h2>
-            <p className="muted">{data.direccion}</p>
+            <p className="muted">{data.direccion || '—'}</p>
             <p>
               <b>Estado:</b> {data.estado} ·{' '}
               <b>Fecha:</b> {data.fecha ? new Date(data.fecha).toLocaleString() : '—'}
             </p>
+
             <p>
               <button className="btn btn--map" onClick={abrirComoLlegar}>
                 Cómo llegar
@@ -119,9 +132,10 @@ export default function TecnicoDetalle() {
                   onClick={() => {
                     if (navigator.geolocation) {
                       navigator.geolocation.getCurrentPosition(
-                        pos => cambiarEstado('EN_SITIO', {
-                          geo: { lat: pos.coords.latitude, lng: pos.coords.longitude }
-                        }),
+                        (pos) =>
+                          cambiarEstado('EN_SITIO', {
+                            geo: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+                          }),
                         () => cambiarEstado('EN_SITIO')
                       );
                     } else {
@@ -133,10 +147,11 @@ export default function TecnicoDetalle() {
                 </button>
               )}
 
-              {/* completar + correo */}
-              {(data.estado === 'EN_SITIO' || data.estado === 'COMPLETADA') && (
+              {/* completar + correo: SOLO cuando está en EN_SITIO */}
+              {data.estado === 'EN_SITIO' && (
                 <div className="card" style={{ marginTop: 12, maxWidth: 640 }}>
                   <h4 style={{ marginTop: 0 }}>Finalizar visita y enviar reporte</h4>
+
                   <label style={{ display: 'block', margin: '8px 0 4px' }}>
                     Resumen (obligatorio)
                   </label>
@@ -177,10 +192,16 @@ export default function TecnicoDetalle() {
 
             <h3>Timeline</h3>
             <ul className="timeline">
-              {data.eventos?.map(ev => (
+              {data.eventos?.map((ev) => (
                 <li key={ev.id}>
-                  <b>{ev.estado_nuevo}</b> — {new Date(ev.created_at || ev.fecha).toLocaleString()}
-                  {ev.nota && <> · <i>{ev.nota}</i></>}
+                  <b>{ev.estado_nuevo}</b> —{' '}
+                  {new Date(ev.created_at || ev.fecha).toLocaleString()}
+                  {ev.nota && (
+                    <>
+                      {' '}
+                      · <i>{ev.nota}</i>
+                    </>
+                  )}
                 </li>
               ))}
               {(!data.eventos || data.eventos.length === 0) && <li>Sin eventos aún.</li>}
@@ -188,9 +209,11 @@ export default function TecnicoDetalle() {
 
             <h3>Evidencias</h3>
             <div className="evidencias">
-              {data.evidencias?.map(e => (
+              {data.evidencias?.map((e) => (
                 <div key={e.id} className="evi">
-                  <a href={e.url} target="_blank" rel="noreferrer">Ver evidencia</a>
+                  <a href={e.url} target="_blank" rel="noreferrer">
+                    Ver evidencia
+                  </a>
                   {e.nota && <p style={{ margin: '6px 0 0' }}>{e.nota}</p>}
                 </div>
               ))}
