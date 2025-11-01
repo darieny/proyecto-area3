@@ -835,7 +835,7 @@ async function getCatalogIdByCode(grupoCodigo, itemCodigo) {
     FROM catalogo_items ci
     JOIN catalogo_grupos cg ON cg.id = ci.grupo_id
    WHERE cg.codigo = $1
-     AND UPPER(ci.codigo) = UPPER($2)s
+     AND UPPER(ci.codigo) = UPPER($2)
    LIMIT 1;
   `, [grupoCodigo, itemCodigo]);
   return rows[0]?.id ?? null;
