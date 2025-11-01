@@ -5,16 +5,28 @@ import {
   getVisitaDetalle,
   postEventoVisita,
   postEvidenciaVisita,
-  getTecnicoSummary
+  getTecnicoSummary,
+  setEstadoTecnico,            
 } from '../controllers/tecnico.controller.js';
 
 const r = Router();
+
+// Todas requieren técnico autenticado
 r.use(requireAuth, requireRole(['tecnico']));
 
+// Listado y detalle
 r.get('/visitas', listMisVisitas);
 r.get('/visitas/:id', getVisitaDetalle);
-r.post('/visitas/:id/eventos', postEventoVisita);     // cambiar estado + log + real_inicio/fin
-r.post('/visitas/:id/evidencias', postEvidenciaVisita); 
+
+// === Cambiar estado (2 formas compatibles) ===
+r.post('/visitas/:id/eventos', postEventoVisita);
+r.patch('/visitas/:id/estado', setEstadoTecnico);  
+
+// Evidencias
+r.post('/visitas/:id/evidencias', postEvidenciaVisita);
+
+// Resumen del técnico
 r.get('/summary', getTecnicoSummary);
 
 export default r;
+
