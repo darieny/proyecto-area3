@@ -158,6 +158,36 @@ export async function supPlanificarVisita(req, res) {
   // 3) Forzar estado PROGRAMADA
   const status_id = await getProgramadaStatusId();
 
+  // 3.1) Resolver ubicacion_id si no vino
+  let ubicacionIdFinal = ubicacion_id ?? null;
+  if (!ubicacionIdFinal && cliente_id) {
+    // 1) preferir con coordenadas
+    const { rows: withCoords } = await query(
+      `SELECT id
+         FROM ubicaciones
+        WHERE cliente_id = $1
+          AND latitud IS NOT NULL
+          AND longitud IS NOT NULL
+        ORDER BY id ASC
+        LIMIT 1`,
+      [cliente_id]
+    );
+    if (withCoords[0]) {
+      ubicacionIdFinal = withCoords[0].id;
+    } else {
+      // 2) fallback: la primera que exista
+      const { rows: anyUbi } = await query(
+        `SELECT id
+           FROM ubicaciones
+          WHERE cliente_id = $1
+          ORDER BY id ASC
+          LIMIT 1`,
+        [cliente_id]
+      );
+      ubicacionIdFinal = anyUbi[0]?.id ?? null;
+    }
+  }
+
   // 4) Insertar visita
   const { rows } = await query(
     `
@@ -177,7 +207,7 @@ export async function supPlanificarVisita(req, res) {
     `,
     [
       cliente_id ?? null,
-      ubicacion_id ?? null,
+      ubicacionIdFinal,
       titulo,
       descripcion ?? null,
       tecnicoFinal,           
