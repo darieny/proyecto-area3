@@ -9,7 +9,7 @@ import '../css/Tecnico.css';
 export default function TecnicoDetalle() {
   const { id } = useParams();
   const [sp] = useSearchParams();
-  const { data, loading, err, cambiarEstado, subirEvidencia, completar } = useTecnicoDetalle(id);
+  const { data, loading, err, cambiarEstado, subirEvidencia, completar, reload  } = useTecnicoDetalle(id);
 
   // UI layout
   const [collapsed, setCollapsed] = useState(false);
@@ -67,10 +67,8 @@ export default function TecnicoDetalle() {
       trabajo_realizado: String(trabajo || '').trim(),
     });
 
-    // refrescar los datos en pantalla con la visita actualizada
-    if (resp?.visita) {
-      setData(resp.visita);
-    }
+    // refrescar desde el backend
+    await reload();
 
     setResumen('');
     setTrabajo('');
