@@ -244,8 +244,8 @@ export async function createForCliente(req, res, next) {
         b.tecnico_asignado_id || null,
         b.creado_por_id,
         statusId,
-        priorityId || null,   
-        typeId || null,       
+        priorityId || null,
+        typeId || null,
         b.programada_inicio || null,
         b.programada_fin || null
       ]
@@ -880,12 +880,12 @@ export async function completarYEnviar(req, res, next) {
        LIMIT 1;
     `, [visitaId]);
 
-    if (!vRows[0]) return res.status(404).json({ ok:false, error:'Visita no encontrada' });
+    if (!vRows[0]) return res.status(404).json({ ok: false, error: 'Visita no encontrada' });
 
-    const visita     = vRows[0];
-    const cliente    = { id: visita.cliente_id, nombre: visita.cliente_nombre, correo: visita.cliente_correo };
-    const ubicacion  = visita.ubicacion_id ? { etiqueta: visita.ubicacion_etiqueta, direccion_linea1: visita.direccion_linea1 } : null;
-    const tecnico    = { id: visita.tecnico_asignado_id, nombre: visita.tecnico_nombre || '-' };
+    const visita = vRows[0];
+    const cliente = { id: visita.cliente_id, nombre: visita.cliente_nombre, correo: visita.cliente_correo };
+    const ubicacion = visita.ubicacion_id ? { etiqueta: visita.ubicacion_etiqueta, direccion_linea1: visita.direccion_linea1 } : null;
+    const tecnico = { id: visita.tecnico_asignado_id, nombre: visita.tecnico_nombre || '-' };
 
     // 2) Transacción: marcar horas del sistema + estado COMPLETADA + upsert de cierre
     const completadaId = await getStatusCompletadaId();
@@ -902,7 +902,7 @@ export async function completarYEnviar(req, res, next) {
        RETURNING real_inicio, real_fin;
     `, [completadaId, visitaId]);
     const real_inicio = tRows[0].real_inicio;
-    const real_fin    = tRows[0].real_fin;
+    const real_fin = tRows[0].real_fin;
 
     // Upsert de cierre
     const { rows: cierreRows } = await query(`
@@ -927,9 +927,9 @@ export async function completarYEnviar(req, res, next) {
 
     // 4) Email HTML + técnico
     const html = buildVisitaEmail({
-      visita:   { id: visita.id, titulo: visita.titulo, real_inicio, real_fin },
+      visita: { id: visita.id, titulo: visita.titulo, real_inicio, real_fin },
       cliente, ubicacion,
-      cierre:   { ...cierre, tecnico_nombre: tecnico.nombre },
+      cierre: { ...cierre, tecnico_nombre: tecnico.nombre },
       materiales: [], // explícitamente vacío
       evidencias: evids
     });
@@ -946,9 +946,24 @@ export async function completarYEnviar(req, res, next) {
       );
     }
 
-    return res.json({ ok:true, visitaId, email: sent });
+    // === devolver la visita completa y actualizada ===
+    const selectNorm = buildSelectNormalizado();
+    const { rows: full } = await query(`
+  SELECT ${selectNorm}
+  FROM visitas v
+  JOIN clientes c         ON c.id = v.cliente_id
+  LEFT JOIN ubicaciones u ON u.id = v.ubicacion_id
+  LEFT JOIN usuarios tu   ON tu.id = v.tecnico_asignado_id
+  JOIN usuarios cu        ON cu.id = v.creado_por_id
+  LEFT JOIN catalogo_items s  ON s.id  = v.status_id
+  LEFT JOIN catalogo_items pr ON pr.id = v.priority_id
+  LEFT JOIN catalogo_items ty ON ty.id = v.type_id
+  WHERE v.id = $1
+`, [visitaId]);
+
+    return res.json({ ok: true, visitaId, email: sent });
   } catch (err) {
-    try { await query('ROLLBACK'); } catch (_) {}
+    try { await query('ROLLBACK'); } catch (_) { }
     next(err);
   }
 }

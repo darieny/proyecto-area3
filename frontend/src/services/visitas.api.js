@@ -20,8 +20,6 @@ function toISODateOrEmpty(v, endOfDay = false) {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
-// (Opcional) mapeos legacy — si te llega texto, mandamos 'estado' textual;
-// si te llega número, mandamos 'status_id'. Evitamos suponer IDs fijos.
 const PRIORITY_MAP = {
   baja: 4,
   media: 5,
@@ -45,7 +43,7 @@ const mapCreate = (data) => {
     creado_por_id: data.creadoPorId,
     ubicacion_id: data.ubicacionId ?? null,
     tecnico_asignado_id: data.tecnicoId ?? null,
-    status_id: 1, // si tu catálogo tiene otro ID por defecto, el backend también acepta por_defecto
+    status_id: 1, // si el catálogo tiene otro ID por defecto, el backend también acepta por_defecto
     programada_inicio: data.programadaInicio ?? start,
     programada_fin: data.programadaFin ?? end,
   };
@@ -156,7 +154,7 @@ export const visitasApi = {
   // Últimas visitas de un cliente
   async listByCliente(clienteId, params = {}) {
     const { data } = await api.get("/visitas", {
-      params: { cliente_id: clienteId, limit: params.limit ?? 5 },
+      params: { cliente_id: clienteId, page: 1, pageSize: params.limit ?? 5 },
     });
     return data;
   },

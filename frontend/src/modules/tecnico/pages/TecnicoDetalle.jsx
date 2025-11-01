@@ -60,11 +60,26 @@ export default function TecnicoDetalle() {
       alert('El resumen es obligatorio para finalizar.');
       return;
     }
-    await completar({ resumen: r, trabajo_realizado: String(trabajo || '').trim() });
+    
+    try {
+    const resp = await completar({
+      resumen: r,
+      trabajo_realizado: String(trabajo || '').trim(),
+    });
+
+    // refrescar los datos en pantalla con la visita actualizada
+    if (resp?.visita) {
+      setData(resp.visita);
+    }
+
     setResumen('');
     setTrabajo('');
     alert('Visita completada y correo enviado (si el cliente tiene correo).');
-  };
+  } catch (err) {
+    console.error(err);
+    alert('Ocurrió un error al completar la visita.');
+  }
+};
 
   return (
     <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
