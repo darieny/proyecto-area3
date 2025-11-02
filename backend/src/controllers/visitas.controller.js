@@ -335,8 +335,8 @@ export async function patchEstado(req, res, next) {
     const getCodigo = (id) => estados.find(e => e.id === id)?.codigo;
     const codigoNuevo = getCodigo(estado_nuevo_id);
 
-    const setRealInicio = (codigoNuevo === 'en_progreso');
-    const setRealFin = (codigoNuevo === 'resuelta' || codigoNuevo === 'cancelada');
+    const setRealInicio = (codigoNuevo?.toUpperCase() === 'EN_SITIO');
+    const setRealFin = (['COMPLETADA','CANCELADA'].includes((codigoNuevo||'').toUpperCase()));
 
     await query('BEGIN');
     try {
@@ -888,11 +888,11 @@ export async function completarYEnviar(req, res, next) {
     }
 
     const visitaBase = vRows[0];
-    const cliente   = { id: visitaBase.cliente_id, nombre: visitaBase.cliente_nombre, correo: visitaBase.cliente_correo };
+    const cliente = { id: visitaBase.cliente_id, nombre: visitaBase.cliente_nombre, correo: visitaBase.cliente_correo };
     const ubicacion = visitaBase.ubicacion_id
       ? { etiqueta: visitaBase.ubicacion_etiqueta, direccion_linea1: visitaBase.direccion_linea1 }
       : null;
-    const tecnico   = { id: visitaBase.tecnico_asignado_id, nombre: visitaBase.tecnico_nombre || '-' };
+    const tecnico = { id: visitaBase.tecnico_asignado_id, nombre: visitaBase.tecnico_nombre || '-' };
 
     const completadaId = await getStatusCompletadaId();
 
@@ -921,7 +921,7 @@ export async function completarYEnviar(req, res, next) {
     `, [completadaId, visitaId]);
 
     const real_inicio = tRows[0].real_inicio;
-    const real_fin    = tRows[0].real_fin;
+    const real_fin = tRows[0].real_fin;
 
     // 1.3) Upsert de cierre
     const { rows: cierreRows } = await query(`
@@ -938,9 +938,9 @@ export async function completarYEnviar(req, res, next) {
 
     // 1.4) Log al timeline
     await query(`
-      INSERT INTO visita_eventos (visita_id, estado_anterior_id, estado_nuevo_id, nota, autor_id)
-      VALUES ($1, $2, $3, $4, $5);
-    `, [visitaId, estadoAnteriorId, completadaId, (resumen || 'COMPLETADA'), req.user?.id ?? null]);
+  INSERT INTO visit_logs (visita_id, autor_id, estado_anterior_id, estado_nuevo_id, nota)
+  VALUES ($1, $2, $3, $4, $5);
+`, [visitaId, req.user?.id ?? null, estadoAnteriorId, completadaId, (resumen || 'COMPLETADA')]);
 
     await query('COMMIT');
 
@@ -954,9 +954,9 @@ export async function completarYEnviar(req, res, next) {
     let sent = { ok: false };
     try {
       const html = buildVisitaEmail({
-        visita:     { id: visitaBase.id, titulo: visitaBase.titulo, real_inicio, real_fin },
+        visita: { id: visitaBase.id, titulo: visitaBase.titulo, real_inicio, real_fin },
         cliente, ubicacion,
-        cierre:     { ...cierre, tecnico_nombre: tecnico.nombre },
+        cierre: { ...cierre, tecnico_nombre: tecnico.nombre },
         materiales: [],
         evidencias: evids,
       });
@@ -993,16 +993,16 @@ export async function completarYEnviar(req, res, next) {
 
     // Eventos para el timeline
     const { rows: eventos } = await query(`
-      SELECT ve.id,
-             ve.created_at,
-             ve.nota,
-             s.codigo  AS estado_nuevo,
-             s.etiqueta AS estado_nuevo_etiqueta
-        FROM visita_eventos ve
-        LEFT JOIN catalogo_items s ON s.id = ve.estado_nuevo_id
-       WHERE ve.visita_id = $1
-       ORDER BY ve.created_at ASC;
-    `, [visitaId]);
+  SELECT l.id,
+         l.fecha,
+         l.nota,
+         s.codigo   AS estado_nuevo,
+         s.etiqueta AS estado_nuevo_etiqueta
+    FROM visit_logs l
+    LEFT JOIN catalogo_items s ON s.id = l.estado_nuevo_id
+   WHERE l.visita_id = $1
+   ORDER BY l.fecha ASC;
+`, [visitaId]);
 
     // Mapea evidencias simple
     const evidencias = evids.map(e => ({
@@ -1021,7 +1021,7 @@ export async function completarYEnviar(req, res, next) {
       evidencias,
     });
   } catch (err) {
-    try { await query('ROLLBACK'); } catch (_) {}
+    try { await query('ROLLBACK'); } catch (_) { }
     next(err);
   }
 }
