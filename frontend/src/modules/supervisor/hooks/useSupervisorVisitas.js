@@ -5,10 +5,11 @@ const PAGE_SIZE = 10;
 
 
 export const VISITA_ESTADOS = [
-  { value: '', label: 'Todos' },
-  { value: 'PENDIENTE', label: 'Pendiente' },
-  { value: 'EN_CURSO',  label: 'En curso' },
-  { value: 'COMPLETADA',label: 'Completada' },
+  { value: "",            label: "Todos" },
+  { value: "PROGRAMADA",  label: "Programada" },
+  { value: "EN_RUTA",     label: "En ruta" },
+  { value: "EN_SITIO",    label: "En sitio" },
+  { value: "COMPLETADA",  label: "Completada" },
 ];
 
 export function useSupervisorVisitas({ page=1, search='', status_codigo='' } = {}) {

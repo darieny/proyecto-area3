@@ -1,11 +1,10 @@
-// src/modules/dashboard/components/Topbar.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function Topbar({ onToggleCollapse, onToggleMobile }) {
   const { user, logout } = useAuth();
 
-  // Nombre visible (ajusta si tu payload trae otras claves)
+  // Nombre visible
   const displayName =
     user?.nombre_completo ||
     user?.nombre ||
@@ -61,9 +60,6 @@ export default function Topbar({ onToggleCollapse, onToggleMobile }) {
         >
           ↔
         </button>
-
-        <button className="tb__icon" title="Notificaciones">🔔</button>
-        <button className="tb__icon" title="Mensajes">💬</button>
 
         {/* === Usuario + menú === */}
         <div
