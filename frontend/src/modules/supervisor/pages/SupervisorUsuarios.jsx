@@ -13,17 +13,16 @@ export default function SupervisorUsuarios() {
     <div className={`shell ${collapsed ? 'is-collapsed' : ''} ${mobileOpen ? 'menu-open' : ''}`}>
       <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
 
-      <div className="main">
+      <main className="main">
         <Topbar
-          onMenu={() => setMobileOpen(v => !v)}
-          onCollapse={() => setCollapsed(v => !v)}
+          onToggleCollapse={() => setCollapsed(v => !v)} 
+          onToggleMobile={() => setMobileOpen(v => !v)}   
           title="Usuarios (mi equipo)"
         />
 
         <div className="card">
           <div className="row between">
             <h2>Mi equipo</h2>
-            {/* Supervisor no crea/borra usuarios */}
           </div>
 
           {loading && <div className="muted">Cargando…</div>}
@@ -41,7 +40,6 @@ export default function SupervisorUsuarios() {
                     <th>Activo</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {items.map(u => (
                     <tr key={u.id}>
@@ -56,12 +54,9 @@ export default function SupervisorUsuarios() {
                       </td>
                     </tr>
                   ))}
-
                   {!items.length && (
                     <tr>
-                      <td colSpan={5} className="muted tright">
-                        Sin técnicos asignados
-                      </td>
+                      <td colSpan={5} className="muted tright">Sin técnicos asignados</td>
                     </tr>
                   )}
                 </tbody>
@@ -69,8 +64,9 @@ export default function SupervisorUsuarios() {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
+
 
