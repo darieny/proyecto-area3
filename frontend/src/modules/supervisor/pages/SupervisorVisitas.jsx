@@ -41,8 +41,8 @@ export default function SupervisorVisitas() {
       <div className="main">
         <Topbar
           title="Visitas / Reportes (mi equipo)"
-          onMenu={() => setMobileOpen((v) => !v)}
-          onCollapse={() => setCollapsed((v) => !v)}
+          onToggleCollapse={() => setCollapsed(v => !v)}  
+          onToggleMobile={() => setMobileOpen(v => !v)}    
         />
 
         <div className="card">
