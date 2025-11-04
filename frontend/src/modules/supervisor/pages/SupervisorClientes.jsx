@@ -108,8 +108,8 @@ export default function SupervisorClientes() {
       <div className="main">
         <Topbar
           title="Clientes"
-          onMenu={() => setMobileOpen((v) => !v)}
-          onCollapse={() => setCollapsed((v) => !v)}
+          onToggleCollapse={() => setCollapsed((v) => !v)}  
+          onToggleMobile={() => setMobileOpen((v) => !v)}    
         />
 
         <div className="card">
