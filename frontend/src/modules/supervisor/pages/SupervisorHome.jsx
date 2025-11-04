@@ -23,7 +23,10 @@ export default function SupervisorHome() {
         onNavigate={() => setMobileOpen(false)}
       />
       <main className="main">
-        <Topbar onToggleMenu={() => setMobileOpen(!mobileOpen)} />
+        <Topbar
+          onToggleCollapse={() => setCollapsed(v => !v)}  
+          onToggleMobile={() => setMobileOpen(v => !v)}    
+        />
 
         <div className="dash">
           <h1 className="dash__title">Dashboard del Supervisor</h1>
