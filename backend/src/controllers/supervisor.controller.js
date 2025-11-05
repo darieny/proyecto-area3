@@ -16,38 +16,59 @@ async function getProgramadaStatusId() {
 }
 
 // ===== Dashboard: KPIs + tendencia semanal =====
-export async function supSummaryVisitas(req, res) {
-  const tecnicos = req.supervisor.tecnicosIds;
-  if (!tecnicos.length) {
-    return res.json({
-      kpis: { total: 0, pendientes: 0, en_curso: 0, completadas: 0 },
-      trend: []
-    });
-  }
+export async function supSummaryVisitas(req, res, next) {
+  try {
+    const tecnicos = req.supervisor.tecnicosIds || [];
 
-  const { rows: kpis } = await query(`
-    SELECT
-      COUNT(*)::int AS total,
-      COUNT(*) FILTER (WHERE s.codigo = 'PENDIENTE')::int  AS pendientes,
-      COUNT(*) FILTER (WHERE s.codigo = 'EN_CURSO')::int   AS en_curso,
-      COUNT(*) FILTER (WHERE s.codigo = 'COMPLETADA')::int AS completadas
-    FROM visitas v
-    JOIN catalogo_items s ON s.id = v.status_id
-    JOIN catalogo_grupos g ON g.id = s.grupo_id AND g.codigo = 'VISITA_STATUS'
-   WHERE v.tecnico_asignado_id = ANY($1)
-  `, [tecnicos]);
+    // Si no tiene técnicos, devuelve las KPIs con 0 pero con las LLAVES correctas
+    if (!tecnicos.length) {
+      return res.json({
+        kpis: {
+          total: 0,
+          programadas: 0,
+          en_ruta: 0,
+          en_sitio: 0,
+          completadas: 0,
+        },
+        trend: [],
+      });
+    }
 
-  const { rows: trend } = await query(`
-    SELECT to_char(date_trunc('week', v.programada_inicio), 'YYYY-MM-DD') AS week,
-           COUNT(*)::int AS visitas
+    // Conteo por estado usando los códigos del catálogo
+    const { rows: byStatus } = await query(`
+      SELECT UPPER(s.codigo) AS codigo, COUNT(*)::int AS total
       FROM visitas v
-     WHERE v.tecnico_asignado_id = ANY($1)
-     GROUP BY 1
-     ORDER BY 1 DESC
-     LIMIT 8;
-  `, [tecnicos]);
+      JOIN catalogo_items s  ON s.id = v.status_id
+      JOIN catalogo_grupos g ON g.id = s.grupo_id AND g.codigo = 'VISITA_STATUS'
+      WHERE v.tecnico_asignado_id = ANY($1)
+      GROUP BY UPPER(s.codigo)
+    `, [tecnicos]);
 
-  res.json({ kpis: kpis[0], trend: trend.reverse() });
+    const pick = (code) => byStatus.find(r => r.codigo === code)?.total || 0;
+
+    const kpis = {
+      total:       byStatus.reduce((a, r) => a + (r.total || 0), 0),
+      programadas: pick('PROGRAMADA'),
+      en_ruta:     pick('EN_RUTA'),
+      en_sitio:    pick('EN_SITIO'),
+      completadas: pick('COMPLETADA'),
+    };
+
+    // Tendencia
+    const { rows: trend } = await query(`
+      SELECT to_char(date_trunc('day', COALESCE(v.programada_inicio, v.real_inicio, now())), 'YYYY-MM-DD') AS fecha,
+             COUNT(*)::int AS total
+      FROM visitas v
+      WHERE v.tecnico_asignado_id = ANY($1)
+      GROUP BY 1
+      ORDER BY 1 DESC
+      LIMIT 14
+    `, [tecnicos]);
+
+    res.json({ kpis, trend: trend.reverse() });
+  } catch (e) {
+    next(e);
+  }
 }
 
 // ===== Listado de visitas del equipo =====
