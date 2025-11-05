@@ -81,7 +81,9 @@ export default function Sidebar({ collapsed, onNavigate }) {
 
   return (
     <aside className="sb" aria-label="Menú lateral">
-      <div className="sb__logo">{collapsed ? 'L' : 'logo'}</div>
+      <div className="sb__logo">
+        <img src="/Logo_SkyNet.png" alt="Logo SkyNet" style={{ height: 38 }} />
+      </div>
 
       <nav className="sb__section">
         <div className="sb__title">MENÚ</div>
