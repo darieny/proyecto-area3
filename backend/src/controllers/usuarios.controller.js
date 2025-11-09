@@ -219,3 +219,15 @@ export async function deleteUsuario(req, res) {
   res.json({ ok: true });
 }
 
+// ---- GET /usuarios/supervisores
+export async function listSupervisores(_req, res) {
+  const { rows } = await query(`
+    SELECT u.id, u.nombre_completo
+    FROM usuarios u
+    JOIN roles r ON r.id = u.rol_id
+    WHERE r.nombre = 'supervisor' AND u.activo = TRUE
+    ORDER BY u.nombre_completo;
+  `);
+  res.json(rows);
+}
+

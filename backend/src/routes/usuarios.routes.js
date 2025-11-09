@@ -8,6 +8,7 @@ r.use(requireAuth, requireRole(['admin']));
 r.get('/roles', u.listRoles);                     // para poblar <select>
 r.get('/', u.listUsuarios);                       // tabla de usuarios
 r.get('/tecnicos', u.listTecnicos);               // llenar <select> de visitas
+r.get('/supervisores', u.listSupervisores);         // llenar <select> de supervisores
 r.post('/', u.createUsuario);                     // crear usuario (admin/sup/tecnico)
 r.patch('/:id', u.updateUsuarioBasic);            // actualizar datos/rol/activo/supervisor
 r.patch('/:id/password', u.updateUsuarioPassword);// cambiar contraseña (admin)

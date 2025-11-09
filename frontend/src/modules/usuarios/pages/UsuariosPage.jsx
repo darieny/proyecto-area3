@@ -1,5 +1,4 @@
-// src/modules/usuarios/pages/UsuariosPage.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { useUsuarios } from "../hooks/useUsuarios.js";
@@ -12,6 +11,15 @@ export default function UsuariosPage() {
 
   const { items, roles, loading, err, create, update, reload } = useUsuarios();
 
+  // ====== Supervisores (para asignar a técnicos) ======
+  const [supervisores, setSupervisores] = useState([]);
+
+  useEffect(() => {
+    api.get("/usuarios/supervisores")
+      .then(res => setSupervisores(res.data || []))
+      .catch(() => setSupervisores([]));
+  }, []);
+
   // ===== Modal Crear =====
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -22,6 +30,7 @@ export default function UsuariosPage() {
     telefono: "",
     rol_id: "",
     password: "",
+    supervisor_id: "",
   });
 
   const roleOptions = useMemo(
@@ -36,10 +45,12 @@ export default function UsuariosPage() {
       telefono: "",
       rol_id: roleOptions[0]?.value || "",
       password: "",
+      supervisor_id: "",
     });
     setFormError("");
     setOpen(true);
   }
+
   function onChange(e) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
@@ -62,6 +73,7 @@ export default function UsuariosPage() {
         telefono: form.telefono.trim() || null,
         rol_id: Number(form.rol_id),
         password: form.password,
+        supervisor_id: form.supervisor_id ? Number(form.supervisor_id) : null,
       });
       setOpen(false);
     } catch (e) {
@@ -84,6 +96,7 @@ export default function UsuariosPage() {
     telefono: "",
     rol_id: "",
     activo: true,
+    supervisor_id: "",
   });
 
   function openEdit(u) {
@@ -95,6 +108,7 @@ export default function UsuariosPage() {
       telefono: u.telefono || "",
       rol_id: u.rol_id || "",
       activo: !!u.activo,
+      supervisor_id: u.supervisor_id || "",
     });
     setEditErr("");
     setEditOpen(true);
@@ -118,6 +132,7 @@ export default function UsuariosPage() {
         telefono: editForm.telefono?.trim() || null,
         rol_id: Number(editForm.rol_id),
         activo: !!editForm.activo,
+        supervisor_id: editForm.supervisor_id ? Number(editForm.supervisor_id) : null, // 👈 agregado
       });
       setEditOpen(false);
     } catch (e) {
@@ -134,6 +149,9 @@ export default function UsuariosPage() {
     await api.delete(`/usuarios/${u.id}`);
     await reload();
   }
+
+
+  // =======================  UI  ===============================
 
   return (
     <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
@@ -228,26 +246,38 @@ export default function UsuariosPage() {
                 </label>
                 <label>
                   Teléfono
-                  <input
-                    name="telefono"
-                    value={form.telefono}
-                    onChange={onChange}
-                  />
+                  <input name="telefono" value={form.telefono} onChange={onChange} />
                 </label>
                 <label>
                   Rol
-                  <select
-                    name="rol_id"
-                    value={form.rol_id}
-                    onChange={onChange}
-                    required
-                  >
+                  <select name="rol_id" value={form.rol_id} onChange={onChange} required>
                     <option value="" disabled>Selecciona un rol…</option>
                     {roleOptions.map((r) => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
                 </label>
+
+                {/* Mostrar select de supervisor solo si el rol es técnico */}
+                {roles.find(r => r.id === Number(form.rol_id))?.nombre === "tecnico" && (
+                  <label>
+                    Supervisor
+                    <select
+                      name="supervisor_id"
+                      value={form.supervisor_id || ""}
+                      onChange={onChange}
+                      required
+                    >
+                      <option value="">Selecciona un supervisor…</option>
+                      {supervisores.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre_completo}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
                 <label>
                   Contraseña
                   <input
@@ -262,12 +292,7 @@ export default function UsuariosPage() {
                 {formError && <div className="error">{formError}</div>}
 
                 <div className="row end gap">
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => setOpen(false)}
-                    disabled={saving}
-                  >
+                  <button type="button" className="btn" onClick={() => setOpen(false)} disabled={saving}>
                     Cancelar
                   </button>
                   <button type="submit" className="btn primary" disabled={saving}>
@@ -320,6 +345,26 @@ export default function UsuariosPage() {
                     ))}
                   </select>
                 </label>
+
+                {/* Select de supervisor si el rol es técnico */}
+                {roles.find(r => r.id === Number(editForm.rol_id))?.nombre === "tecnico" && (
+                  <label>
+                    Supervisor
+                    <select
+                      name="supervisor_id"
+                      value={editForm.supervisor_id || ""}
+                      onChange={onEditChange}
+                    >
+                      <option value="">Selecciona un supervisor…</option>
+                      {supervisores.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre_completo}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
                 <label className="row" style={{ gap: 8 }}>
                   <input
                     type="checkbox"
@@ -348,5 +393,6 @@ export default function UsuariosPage() {
     </div>
   );
 }
+
 
 
