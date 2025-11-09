@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Sidebar from "../../dashboard/components/Sidebar";
 import Topbar from "../../dashboard/components/Topbar";
 import { api } from "../../../services/http";
-import { useSupervisorTecnicos } from "../hooks/useSupervisorTecnicos"; 
+import { useSupervisorTecnicos } from "../hooks/useSupervisorTecnicos";
 import "../../clientes/css/Clientes.css";
 
 export default function SupervisorClientes() {
@@ -15,7 +15,8 @@ export default function SupervisorClientes() {
   const [error, setError] = useState("");
 
   // Técnicos del supervisor
-  const { items: tecnicos, loading: loadingTec, err: errTec } = useSupervisorTecnicos();
+  const { items: tecnicos, loading: loadingTec, err: errTec } =
+    useSupervisorTecnicos();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clienteSel, setClienteSel] = useState(null);
@@ -27,10 +28,11 @@ export default function SupervisorClientes() {
     programada_inicio: "",
     programada_fin: "",
   });
+
   const [saving, setSaving] = useState(false);
   const [msgError, setMsgError] = useState("");
 
-  // Cargar clientes
+  // Cargar clientes una sola vez
   useEffect(() => {
     (async () => {
       try {
@@ -50,7 +52,7 @@ export default function SupervisorClientes() {
     if (!loadingTec && tecnicos.length && !form.tecnico_asignado_id) {
       setForm((f) => ({ ...f, tecnico_asignado_id: tecnicos[0].id }));
     }
-  }, [loadingTec, tecnicos]);
+  }, [loadingTec, tecnicos, form.tecnico_asignado_id]);
 
   const abrirModal = (cliente) => {
     setClienteSel(cliente);
@@ -80,8 +82,10 @@ export default function SupervisorClientes() {
     e.preventDefault();
     setMsgError("");
 
-    if (!form.titulo.trim()) return setMsgError("El título es requerido");
-    if (!form.tecnico_asignado_id) return setMsgError("Selecciona un técnico");
+    if (!form.titulo.trim())
+      return setMsgError("El título es requerido");
+    if (!form.tecnico_asignado_id)
+      return setMsgError("Selecciona un técnico");
 
     try {
       setSaving(true);
@@ -95,7 +99,8 @@ export default function SupervisorClientes() {
       });
       cerrarModal();
     } catch (e) {
-      const msg = e?.response?.data?.error || "Error al crear la visita";
+      const msg =
+        e?.response?.data?.error || "Error al crear la visita";
       setMsgError(msg);
     } finally {
       setSaving(false);
@@ -103,17 +108,26 @@ export default function SupervisorClientes() {
   };
 
   return (
-    <div className={`shell ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "menu-open" : ""}`}>
-      <Sidebar collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
+    <div
+      className={`shell ${collapsed ? "is-collapsed" : ""} ${
+        mobileOpen ? "menu-open" : ""
+      }`}
+    >
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={() => setMobileOpen(false)}
+      />
+
       <div className="main">
         <Topbar
           title="Clientes"
-          onToggleCollapse={() => setCollapsed((v) => !v)}  
-          onToggleMobile={() => setMobileOpen((v) => !v)}    
+          onToggleCollapse={() => setCollapsed((v) => !v)}
+          onToggleMobile={() => setMobileOpen((v) => !v)}
         />
 
         <div className="card">
           <h2>Clientes</h2>
+
           {loading && <div className="muted">Cargando...</div>}
           {error && <div className="error">{error}</div>}
 
@@ -131,53 +145,97 @@ export default function SupervisorClientes() {
                 {clientes.map((c) => (
                   <tr key={c.id}>
                     <td>
-                      <Link to={`/supervisor/clientes/${c.id}`} className="link-cliente">
+                      <Link
+                        to={`/supervisor/clientes/${c.id}`}
+                        className="link-cliente"
+                      >
                         {c.nombre}
                       </Link>
                     </td>
-                    <td>{c.ciudad || "-"} / {c.departamento || "-"}</td>
+                    <td>
+                      {c.ciudad || "-"} / {c.departamento || "-"}
+                    </td>
                     <td>{c.telefono || "—"}</td>
                     <td className="tright">
                       <button
                         className="btn small"
                         onClick={() => abrirModal(c)}
                         disabled={loadingTec || !tecnicos.length}
-                        title={loadingTec ? "Cargando técnicos…" : (!tecnicos.length ? "No hay técnicos asignados" : "")}
+                        title={
+                          loadingTec
+                            ? "Cargando técnicos…"
+                            : !tecnicos.length
+                            ? "No hay técnicos asignados"
+                            : ""
+                        }
                       >
                         Planificar visita
                       </button>
                     </td>
                   </tr>
                 ))}
+
                 {!clientes.length && (
-                  <tr><td colSpan="4" className="muted tright">Sin clientes</td></tr>
+                  <tr>
+                    <td
+                      colSpan="4"
+                      className="muted tright"
+                    >
+                      Sin clientes
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           )}
 
-          {/* error de técnicos */}
-          {!loadingTec && errTec && <div className="error" style={{ marginTop: 10 }}>{errTec}</div>}
+          {!loadingTec && errTec && (
+            <div
+              className="error"
+              style={{ marginTop: 10 }}
+            >
+              {errTec}
+            </div>
+          )}
         </div>
 
         {/* Modal planificar */}
         {modalOpen && clienteSel && (
-          <div className="modal__backdrop" onClick={cerrarModal}>
-            <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal__backdrop"
+            onClick={cerrarModal}
+          >
+            <div
+              className="modal"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h3>Planificar visita</h3>
               <p className="muted">
-                Cliente: <strong>{clienteSel.nombre}</strong>
+                Cliente:{" "}
+                <strong>{clienteSel.nombre}</strong>
               </p>
 
-              <form onSubmit={guardarVisita} className="form">
+              <form
+                onSubmit={guardarVisita}
+                className="form"
+              >
                 <label>
                   Título
-                  <input name="titulo" value={form.titulo} onChange={handleChange} required />
+                  <input
+                    name="titulo"
+                    value={form.titulo}
+                    onChange={handleChange}
+                    required
+                  />
                 </label>
 
                 <label>
                   Descripción
-                  <textarea name="descripcion" value={form.descripcion} onChange={handleChange} />
+                  <textarea
+                    name="descripcion"
+                    value={form.descripcion}
+                    onChange={handleChange}
+                  />
                 </label>
 
                 <label>
@@ -186,10 +244,15 @@ export default function SupervisorClientes() {
                     name="tecnico_asignado_id"
                     value={form.tecnico_asignado_id}
                     onChange={handleChange}
-                    disabled={loadingTec || !tecnicos.length}
+                    disabled={
+                      loadingTec || !tecnicos.length
+                    }
                   >
                     {tecnicos.map((t) => (
-                      <option key={t.id} value={t.id}>
+                      <option
+                        key={t.id}
+                        value={t.id}
+                      >
                         {t.nombre_completo}
                       </option>
                     ))}
@@ -216,14 +279,30 @@ export default function SupervisorClientes() {
                   />
                 </label>
 
-                {msgError && <div className="error">{msgError}</div>}
+                {msgError && (
+                  <div className="error">{msgError}</div>
+                )}
 
                 <div className="row end gap">
-                  <button type="button" className="btn" onClick={cerrarModal}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={cerrarModal}
+                  >
                     Cancelar
                   </button>
-                  <button type="submit" className="btn primary" disabled={saving || loadingTec || !tecnicos.length}>
-                    {saving ? "Guardando..." : "Guardar visita"}
+                  <button
+                    type="submit"
+                    className="btn primary"
+                    disabled={
+                      saving ||
+                      loadingTec ||
+                      !tecnicos.length
+                    }
+                  >
+                    {saving
+                      ? "Guardando..."
+                      : "Guardar visita"}
                   </button>
                 </div>
               </form>
@@ -234,4 +313,5 @@ export default function SupervisorClientes() {
     </div>
   );
 }
+
 
